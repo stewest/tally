@@ -1,0 +1,175 @@
+export const inviteUserTemplate = (variables: {
+  organisationName: string;
+  siteName: string;
+  inviteUrl: string;
+}) => `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>You're Invited!</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333333;
+        background-color: #f8f9fa;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 30px;
+        text-align: center;
+      }
+      .header h1 {
+        color: #ffffff;
+        margin: 0;
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .content {
+        padding: 40px 30px;
+      }
+      .greeting {
+        font-size: 18px;
+        color: #2d3748;
+        margin-bottom: 20px;
+      }
+      .message {
+        font-size: 16px;
+        color: #4a5568;
+        margin-bottom: 30px;
+        line-height: 1.7;
+      }
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 16px 32px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 16px;
+        margin: 20px 0;
+        transition: transform 0.2s ease;
+      }
+      .cta-button:hover {
+        transform: translateY(-1px);
+      }
+      .secondary-info {
+        background-color: #f7fafc;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        margin: 30px 0;
+        border-radius: 0 6px 6px 0;
+      }
+      .secondary-info p {
+        margin: 0;
+        font-size: 14px;
+        color: #4a5568;
+      }
+      .footer {
+        background-color: #f8f9fa;
+        padding: 30px;
+        text-align: center;
+        border-top: 1px solid #e2e8f0;
+      }
+      .footer p {
+        margin: 0;
+        font-size: 14px;
+        color: #718096;
+      }
+      .divider {
+        height: 1px;
+        background-color: #e2e8f0;
+        margin: 30px 0;
+      }
+      @media (max-width: 600px) {
+        .container {
+          margin: 10px;
+        }
+        .header,
+        .content {
+          padding: 30px 20px;
+        }
+        .header h1 {
+          font-size: 24px;
+        }
+        .cta-button {
+          display: block;
+          text-align: center;
+          margin: 20px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎉 You're Invited!</h1>
+      </div>
+
+      <div class="content">
+        <div class="greeting">Hi there,</div>
+
+        <div class="message">
+          Great news! You've been invited to join
+          <strong>${variables.organisationName}</strong> on ${variables.siteName}. We're excited
+          to have you as part of our team!
+        </div>
+
+        <div style="text-align: center">
+          <a href="${variables.inviteUrl}" class="cta-button">Accept Invitation</a>
+        </div>
+
+        <div class="secondary-info">
+          <p><strong>What happens next?</strong></p>
+          <p>
+            Click the button above to accept your invitation. If you don't have
+            an account yet, you'll be able to create one during the process. It
+            only takes a minute!
+          </p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="font-size: 14px; color: #718096">
+          <p>
+            If the button doesn't work, you can also copy and paste this link
+            into your browser:
+          </p>
+          <p
+            style="
+              word-break: break-all;
+              background-color: #f7fafc;
+              padding: 10px;
+              border-radius: 4px;
+              font-family: monospace;
+            "
+          >
+            ${variables.inviteUrl}
+          </p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>This invitation was sent by ${variables.organisationName}</p>
+        <p style="margin-top: 10px">
+          If you didn't expect this invitation, you can safely ignore this
+          email.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`;

@@ -1,0 +1,134 @@
+# GitLab CI/CD Pipeline for SVR Security Scanning
+# This pipeline runs on every merge request and push to main/develop branches
+
+include:
+  # GitLab's built-in dependency scanning template (Free tier)
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  # GitLab's built-in secret detection template (Free tier)
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+variables:
+  # Node.js version
+  NODE_VERSION: "20"
+  # npm audit severity level that causes failure
+  NPM_AUDIT_LEVEL: "high"
+
+stages:
+  - validate
+  - test
+  - security
+  - release
+
+# Cache node_modules between jobs
+.node_cache:
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: pull-push
+
+# Base configuration for Node.js jobs
+.node_base:
+  image: node:${NODE_VERSION}
+  extends: .node_cache
+  before_script:
+    - npm ci --prefer-offline
+
+# ============================================================================
+# VALIDATE STAGE
+# ============================================================================
+
+# TypeScript type checking
+type-check:
+  extends: .node_base
+  stage: validate
+  script:
+    - echo "Running TypeScript type check..."
+    - npx tsc --noEmit
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+# npm audit for dependency vulnerabilities
+npm-audit:
+  extends: .node_base
+  stage: validate
+  script:
+    - echo "Running npm audit for security vulnerabilities..."
+    - npm audit --audit-level=${NPM_AUDIT_LEVEL} --json > npm-audit.json || true
+    - npm audit --audit-level=${NPM_AUDIT_LEVEL}
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+  artifacts:
+    paths:
+      - npm-audit.json
+    when: always
+
+# ============================================================================
+# SECURITY STAGE
+# ============================================================================
+
+# GitLab Secret Detection (from included template)
+# Scans for hardcoded secrets and credentials
+secret_detection:
+  stage: security
+  variables:
+    SECRET_DETECTION_HISTORIC_SCAN: "false"
+    SECURE_LOG_LEVEL: "info"
+  # Always fail if secrets are detected - this is critical
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+# TruffleHog secret scanning for git history
+# Provides additional secret detection beyond GitLab's built-in scanner
+trufflehog-scan:
+  stage: security
+  image:
+    name: trufflesecurity/trufflehog:3.93.6
+    entrypoint: [""]
+  script:
+    - echo "Scanning git history for secrets with TruffleHog..."
+    - trufflehog git file://. --only-verified --fail --no-update
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+# ============================================================================
+# RELEASE STAGE
+# ============================================================================
+
+# Automated release creation for production deployments
+document-release:
+  stage: release
+  rules:
+    - if: $CI_COMMIT_BRANCH == "production"
+  variables:
+    GIT_STRATEGY: none
+  image:
+    name: registry.gitlab.com/gitlab-org/cli:latest
+  script:
+    - echo "Creating release for version $SEMVER.$CI_PIPELINE_ID"
+    - echo "Deployment to production environment completed successfully"
+  release:
+    tag_name: "v$SEMVER.$CI_PIPELINE_ID"
+    description: |
+      Automated release for SVR version $SEMVER.$CI_PIPELINE_ID deployed to production environment.
+
+      **Deployment Details:**
+      - Pipeline: $CI_PIPELINE_ID
+      - Commit: $CI_COMMIT_SHA
+      - Branch: $CI_COMMIT_BRANCH
+      - Environment: production
+      - Project: SVR
+    ref: "$CI_COMMIT_SHA"
