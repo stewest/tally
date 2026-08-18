@@ -122,6 +122,9 @@ export default function ChatTraceView({
   liveStatus,
 }: ChatTraceProps) {
   const [open, setOpen] = useState(false);
+  const latestThought = [...trace.steps]
+    .reverse()
+    .find(step => step.kind === "thought");
   if (trace.steps.length === 0 && !live) {
     return null;
   }
@@ -160,6 +163,11 @@ export default function ChatTraceView({
           </div>
         )}
       </div>
+      {live && latestThought?.label ? (
+        <p className="max-h-32 w-full overflow-y-auto whitespace-pre-wrap text-[13px] leading-5 text-pretty text-gray-500">
+          {latestThought.label}
+        </p>
+      ) : null}
 
       {open && trace.steps.length > 0 && (
         <div className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5">

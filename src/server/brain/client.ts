@@ -230,11 +230,7 @@ interface BrainStreamEvent {
   data?: unknown;
 }
 
-function extractTextDelta(event: BrainStreamEvent): string | null {
-  if (event.type !== "text") {
-    return null;
-  }
-
+function extractLooseDelta(event: BrainStreamEvent): string | null {
   if (typeof event.delta === "string" && event.delta.length > 0) {
     return event.delta;
   }
@@ -255,15 +251,18 @@ function extractTextDelta(event: BrainStreamEvent): string | null {
   return null;
 }
 
+function extractTextDelta(event: BrainStreamEvent): string | null {
+  if (event.type !== "text") {
+    return null;
+  }
+  return extractLooseDelta(event);
+}
+
 function extractThinkingDelta(event: BrainStreamEvent): string | null {
-  if (event.type !== "thinking") return null;
-  if (typeof event.delta === "string" && event.delta.length > 0) {
-    return event.delta;
+  if (event.type !== "thinking" && event.type !== "thinking_delta") {
+    return null;
   }
-  if (typeof event.text === "string" && event.text.length > 0) {
-    return event.text;
-  }
-  return null;
+  return extractLooseDelta(event);
 }
 
 function toActivityEvent(event: BrainStreamEvent): BrainActivityEvent | null {
