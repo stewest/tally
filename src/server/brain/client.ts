@@ -7,10 +7,17 @@
  * The key resolves to a single active brain, which becomes the implicit tenant
  * scope for the request — no brain id is ever sent in the body or route.
  *
- * All HTTP calls use axios (no fetch).
+ * JSON calls use axios. The sync workflow path uses `fetch` so Next.js does
+ * not buffer Brain SSE through the axios adapter.
  */
 import axios, { type AxiosInstance, isAxiosError } from "axios";
 import type { Readable } from "node:stream";
+import {
+  paramsFromUnknown,
+  type BrainActivityEvent,
+} from "@/lib/chat-trace";
+
+export type { BrainActivityEvent };
 
 /** Shared request body accepted by both run endpoints. All fields optional. */
 export interface RunWorkflowOptions {
@@ -22,6 +29,14 @@ export interface RunWorkflowOptions {
   unitOfWorkId?: string;
   /** Honoured on the async path only. */
   callbackUrl?: string;
+  /**
+   * Called for each Brain `text` delta on the sync path. Not sent to the API.
+   */
+  onDelta?: (delta: string) => void | Promise<void>;
+  /**
+   * Called for thinking, tool, status, and text events. Not sent to the API.
+   */
+  onEvent?: (event: BrainActivityEvent) => void | Promise<void>;
 }
 
 export interface BrainConfig {
@@ -197,19 +212,121 @@ export async function createBrainEntity(
 
 /** One decoded Server-Sent Event from the sync run stream. */
 interface BrainStreamEvent {
-  type: "text" | "done" | "error" | string;
-  delta?: string;
+  type: string;
+  delta?: string | { type?: string; text?: string };
+  text?: string;
   message?: string;
+  phase?: string;
+  name?: string;
+  id?: string;
+  ok?: boolean;
+  input?: unknown;
+  params?: unknown;
+  arguments?: unknown;
+  label?: string;
+  summary?: string;
+  result?: unknown;
+  output?: unknown;
+  data?: unknown;
 }
 
-async function consumeBrainSseStream(stream: Readable): Promise<string> {
+function extractTextDelta(event: BrainStreamEvent): string | null {
+  if (event.type !== "text") {
+    return null;
+  }
+
+  if (typeof event.delta === "string" && event.delta.length > 0) {
+    return event.delta;
+  }
+
+  if (
+    event.delta &&
+    typeof event.delta === "object" &&
+    typeof event.delta.text === "string" &&
+    event.delta.text.length > 0
+  ) {
+    return event.delta.text;
+  }
+
+  if (typeof event.text === "string" && event.text.length > 0) {
+    return event.text;
+  }
+
+  return null;
+}
+
+function extractThinkingDelta(event: BrainStreamEvent): string | null {
+  if (event.type !== "thinking") return null;
+  if (typeof event.delta === "string" && event.delta.length > 0) {
+    return event.delta;
+  }
+  if (typeof event.text === "string" && event.text.length > 0) {
+    return event.text;
+  }
+  return null;
+}
+
+function toActivityEvent(event: BrainStreamEvent): BrainActivityEvent | null {
+  if (event.type === "status" && event.phase) {
+    return { type: "status", phase: event.phase };
+  }
+
+  const thinking = extractThinkingDelta(event);
+  if (thinking) {
+    return { type: "thinking", delta: thinking };
+  }
+
+  if (event.type === "tool_call" && event.name) {
+    return {
+      type: "tool_call",
+      id: event.id ?? `tool-${event.name}`,
+      name: event.name,
+      params:
+        paramsFromUnknown(event.params) ??
+        paramsFromUnknown(event.input) ??
+        paramsFromUnknown(event.arguments),
+    };
+  }
+
+  if (event.type === "tool_result" && event.name) {
+    const label =
+      event.label ??
+      event.summary ??
+      (typeof event.message === "string" ? event.message : undefined);
+    return {
+      type: "tool_result",
+      id: event.id ?? `tool-${event.name}`,
+      name: event.name,
+      ok: event.ok !== false,
+      label,
+      result:
+        paramsFromUnknown(event.result) ??
+        paramsFromUnknown(event.output) ??
+        paramsFromUnknown(event.data),
+    };
+  }
+
+  const text = extractTextDelta(event);
+  if (text) {
+    return { type: "text", delta: text };
+  }
+
+  return null;
+}
+
+async function consumeBrainSseWebStream(
+  stream: ReadableStream<Uint8Array>,
+  onDelta?: (delta: string) => void | Promise<void>,
+  onEvent?: (event: BrainActivityEvent) => void | Promise<void>
+): Promise<string> {
+  const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let text = "";
   let streamError: string | null = null;
   let done = false;
 
-  const consumeLine = (line: string): void => {
+  const consumeLine = async (line: string): Promise<void> => {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) return;
 
@@ -223,43 +340,56 @@ async function consumeBrainSseStream(stream: Readable): Promise<string> {
       return;
     }
 
-    switch (event.type) {
-      case "text":
-        if (event.delta) text += event.delta;
-        break;
-      case "error":
-        streamError = event.message ?? "Unknown brain workflow error.";
-        break;
-      case "done":
-        done = true;
-        break;
-      default:
-        break;
+    if (event.type === "error") {
+      streamError = event.message ?? "Unknown brain workflow error.";
+      return;
     }
+
+    if (event.type === "done") {
+      done = true;
+      return;
+    }
+
+    const activity = toActivityEvent(event);
+    if (!activity) return;
+
+    if (activity.type === "text") {
+      text += activity.delta;
+      await onDelta?.(activity.delta);
+    }
+
+    await onEvent?.(activity);
   };
 
-  for await (const chunk of stream) {
-    const value = Buffer.isBuffer(chunk)
-      ? chunk
-      : Buffer.from(chunk as string | Uint8Array);
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (!done) {
+      const { done: readerDone, value } = await reader.read();
+      if (readerDone) break;
 
-    let newlineIndex = buffer.indexOf("\n");
-    while (newlineIndex !== -1) {
-      consumeLine(buffer.slice(0, newlineIndex));
-      buffer = buffer.slice(newlineIndex + 1);
-      newlineIndex = buffer.indexOf("\n");
-      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex = buffer.indexOf("\n");
+      while (newlineIndex !== -1) {
+        await consumeLine(buffer.slice(0, newlineIndex));
+        buffer = buffer.slice(newlineIndex + 1);
+        newlineIndex = buffer.indexOf("\n");
+        if (done) break;
+      }
     }
-    if (done) break;
-  }
 
-  if (buffer) {
-    consumeLine(buffer);
+    if (buffer) {
+      await consumeLine(buffer);
+    }
+  } finally {
+    reader.releaseLock();
   }
 
   if (streamError) {
     throw new Error(`Brain workflow error: ${streamError}`);
+  }
+
+  if (!done && !text) {
+    throw new Error("Brain workflow ended without a reply.");
   }
 
   return text;
@@ -275,29 +405,50 @@ export async function runWorkflowSync(
   workflowCode: string,
   options: RunWorkflowOptions = {}
 ): Promise<string> {
-  const client = createBrainAxios();
+  const { onDelta, onEvent, ...body } = options;
+  const { baseUrl, apiKey } = getBrainConfig();
 
   try {
-    const response = await client.post<Readable>(
-      `/workflows/${encodeURIComponent(workflowCode)}/run/sync`,
-      options,
+    const response = await fetch(
+      `${baseUrl}/workflows/${encodeURIComponent(workflowCode)}/run/sync`,
       {
-        responseType: "stream",
-        headers: { Accept: "text/event-stream" },
-        // Sync agent runs can exceed the default timeout.
-        timeout: 0,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify(body),
+        cache: "no-store",
       }
     );
 
-    if (!response.data) {
+    if (!response.ok) {
+      const raw = (await response.text()).trim();
+      let detail = `${response.status} ${response.statusText}`;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as BrainErrorBody;
+          if (parsed.error) {
+            detail = parsed.error;
+          }
+        } catch {
+          detail = raw;
+        }
+      }
+      throw new Error(`Brain workflow run failed: ${detail}`);
+    }
+
+    if (!response.body) {
       throw new Error("Brain workflow run returned an empty stream.");
     }
 
-    return await consumeBrainSseStream(response.data);
+    return await consumeBrainSseWebStream(response.body, onDelta, onEvent);
   } catch (error) {
     if (
       error instanceof Error &&
       (error.message.startsWith("Brain workflow error:") ||
+        error.message.startsWith("Brain workflow run failed:") ||
         error.message === "Brain workflow run returned an empty stream.")
     ) {
       throw error;

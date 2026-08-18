@@ -24,6 +24,18 @@ export const NAV_LINKS: NavLinkConfig[] = [
     showInNav: true,
   },
   {
+    path: "/transactions",
+    label: "Transactions",
+    icon: "credits",
+    showInNav: true,
+  },
+  {
+    path: "/budgets",
+    label: "Budgets",
+    icon: "chartPie",
+    showInNav: true,
+  },
+  {
     path: "/profile",
     label: "My Profile",
     icon: "user",

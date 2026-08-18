@@ -7,7 +7,13 @@ import {
   InviteToken,
   File,
   InviteWithDetails,
+  Transaction,
+  Budget,
+  ChatSession,
+  ChatMessage,
+  BudgetPeriod,
 } from "../../db/schema";
+import type { BudgetProgress, CategorySpendRow } from "@/lib/finance";
 import { CurrentUser } from "@/server/authentication";
 
 declare global {
@@ -218,22 +224,192 @@ declare global {
     content: string;
   }
 
+  interface ChatTraceSnapshot {
+    elapsedMs: number;
+    steps: Array<
+      | { id: string; kind: "thought"; label: string }
+      | {
+          id: string;
+          kind: "tool";
+          tool: string;
+          label: string;
+          params?: string;
+          result?: string;
+          status: "running" | "done" | "error";
+          durationMs?: number;
+        }
+    >;
+  }
+
   interface ChatRequest {
     message: string;
-    /** Prior turns (oldest first); must match `historySignature`. */
-    history?: ChatHistoryMessage[];
-    /** Server-issued HMAC over org-scoped history; required when history is non-empty. */
-    historySignature?: string;
+    sessionId?: string;
   }
 
   interface ChatResponse {
     success: boolean;
     data?: {
       reply: string;
-      /** Updated transcript including the latest user + assistant turns. */
+      sessionId: string;
       history: ChatHistoryMessage[];
-      /** Signature for the returned history (echo on the next request). */
-      historySignature: string;
+    };
+    error?: string;
+  }
+
+  type ChatStreamEvent =
+    | { type: "session"; sessionId: string }
+    | { type: "status"; phase: string }
+    | { type: "thinking"; delta: string }
+    | { type: "tool_call"; id: string; name: string; params?: string }
+    | {
+        type: "tool_result";
+        id: string;
+        name: string;
+        ok: boolean;
+        label?: string;
+        result?: string;
+      }
+    | { type: "text"; delta: string }
+    | {
+        type: "done";
+        reply: string;
+        sessionId: string;
+        history: ChatHistoryMessage[];
+        title?: string;
+        trace?: ChatTraceSnapshot;
+      }
+    | { type: "error"; message: string };
+
+  interface ListChatSessionsResponse {
+    success: boolean;
+    data?: ChatSession[];
+    error?: string;
+  }
+
+  interface CreateChatSessionResponse {
+    success: boolean;
+    data?: ChatSession;
+    error?: string;
+  }
+
+  interface GetChatSessionResponse {
+    success: boolean;
+    data?: {
+      session: ChatSession;
+      messages: ChatMessage[];
+    };
+    error?: string;
+  }
+
+  interface RenameChatSessionRequest {
+    title: string;
+  }
+
+  interface RenameChatSessionResponse {
+    success: boolean;
+    data?: ChatSession;
+    error?: string;
+  }
+
+  interface DeleteChatSessionResponse {
+    success: boolean;
+    error?: string;
+  }
+
+  // Finance
+  interface ListTransactionsResponse {
+    success: boolean;
+    data?: Transaction[];
+    error?: string;
+  }
+
+  interface CreateTransactionRequest {
+    occurredAt: string;
+    description: string;
+    amount: string;
+    merchant?: string | null;
+    category?: string | null;
+    account?: string | null;
+    notes?: string | null;
+    currency?: string;
+  }
+
+  interface CreateTransactionResponse {
+    success: boolean;
+    data?: Transaction;
+    error?: string;
+  }
+
+  interface UpdateTransactionRequest {
+    occurredAt?: string;
+    description?: string;
+    amount?: string;
+    merchant?: string | null;
+    category?: string | null;
+    account?: string | null;
+    notes?: string | null;
+    currency?: string;
+  }
+
+  interface UpdateTransactionResponse {
+    success: boolean;
+    data?: Transaction;
+    error?: string;
+  }
+
+  interface DeleteTransactionResponse {
+    success: boolean;
+    error?: string;
+  }
+
+  interface ListBudgetsResponse {
+    success: boolean;
+    data?: Budget[];
+    error?: string;
+  }
+
+  interface UpsertBudgetRequest {
+    category: string;
+    period: BudgetPeriod;
+    amount: string;
+    startsOn: string;
+    endsOn?: string | null;
+    notes?: string | null;
+    currency?: string;
+  }
+
+  interface UpsertBudgetResponse {
+    success: boolean;
+    data?: Budget;
+    error?: string;
+  }
+
+  interface UpdateBudgetRequest {
+    category?: string;
+    period?: BudgetPeriod;
+    amount?: string;
+    startsOn?: string;
+    endsOn?: string | null;
+    notes?: string | null;
+    currency?: string;
+  }
+
+  interface UpdateBudgetResponse {
+    success: boolean;
+    data?: Budget;
+    error?: string;
+  }
+
+  interface DeleteBudgetResponse {
+    success: boolean;
+    error?: string;
+  }
+
+  interface FinanceSummaryResponse {
+    success: boolean;
+    data?: {
+      byCategory: CategorySpendRow[];
+      budgets: BudgetProgress[];
     };
     error?: string;
   }

@@ -51,7 +51,7 @@ function SidebarStory({
 
       <nav className="flex-1 px-3 py-1 overflow-y-auto">
         <ul className="space-y-0">
-          {links.map((navLink) => (
+          {links.map(navLink => (
             <li key={navLink.path}>
               <a
                 href={navLink.path}
@@ -61,7 +61,7 @@ function SidebarStory({
                     : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                 }`}
                 title={collapsed ? navLink.label : undefined}
-                onClick={(e) => e.preventDefault()}
+                onClick={e => e.preventDefault()}
               >
                 <Icon
                   icon={navLink.icon}
@@ -101,7 +101,7 @@ export const Default: Story = {
   args: {
     links: defaultLinks,
     activePath: "/dashboard",
-    appName: "App",
+    appName: "TALLY",
   },
 };
 
@@ -109,7 +109,7 @@ export const Collapsed: Story = {
   args: {
     links: defaultLinks,
     activePath: "/dashboard",
-    appName: "App",
+    appName: "TALLY",
     defaultCollapsed: true,
   },
 };

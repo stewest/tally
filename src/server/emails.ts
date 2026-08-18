@@ -69,7 +69,7 @@ class EmailService {
     const variables = {
       organisationName: organisationName || "the organization",
       inviteUrl,
-      siteName: process.env.NEXT_PUBLIC_APP_NAME || "User Management System",
+      siteName: process.env.NEXT_PUBLIC_APP_NAME || "TALLY",
     };
 
     const htmlBody = inviteUserTemplate(variables);

@@ -1,187 +1,472 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
-import BaseCard from "@/components/ui/BaseCard";
-import Button from "@/components/buttons/Button";
-import ChatMarkdown from "@/components/chat/ChatMarkdown";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ChatComposer from "@/components/chat/ChatComposer";
+import ChatLayout from "@/components/chat/ChatLayout";
+import ChatMessage, {
+  type DisplayChatMessage,
+} from "@/components/chat/ChatMessage";
+import ChatSessionList from "@/components/chat/ChatSessionList";
+import TransactionPasteNotice from "@/components/chat/TransactionPasteNotice";
 import { Icon } from "@/components/ui/Icon";
+import { useUser } from "@/context/UserContext";
+import { useBrainChat } from "@/hooks/useBrainChat";
 import {
-  type BrainChatHistoryMessage,
-  useBrainChat,
-} from "@/hooks/useBrainChat";
+  useChatSession,
+  useChatSessions,
+  useDeleteChatSession,
+  useRenameChatSession,
+} from "@/hooks/useChatSessions";
+import {
+  countBankStatementLines,
+  createTextRevealer,
+  deriveSessionTitle,
+  wrapBankStatement,
+} from "@/lib/chat";
+import {
+  applyTraceEvent,
+  decodeAssistantContent,
+  emptyTraceState,
+  finalizeTrace,
+  statusPhaseLabel,
+  type ChatTraceState,
+} from "@/lib/chat-trace";
 
-interface DisplayMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+const SUGGESTIONS = [
+  "Which budgets are over 80% used?",
+  "Summarise spend by category this quarter",
+  "Find transactions over $250",
+  "How much have I spent on groceries this month?",
+];
 
 interface BrainChatProps {
   className?: string;
-  /** Stretch to fill the parent height (used on /chat). */
   fillHeight?: boolean;
 }
 
 function toDisplayMessages(
-  history: BrainChatHistoryMessage[]
-): DisplayMessage[] {
-  return history.map(message => ({
-    id: crypto.randomUUID(),
-    role: message.role,
-    content: message.content,
-  }));
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    createdAt: Date | string;
+  }>
+): DisplayChatMessage[] {
+  return messages.map(message => {
+    if (message.role !== "assistant") {
+      return {
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        createdAt:
+          typeof message.createdAt === "string"
+            ? message.createdAt
+            : message.createdAt.toISOString(),
+      };
+    }
+    const decoded = decodeAssistantContent(message.content);
+    return {
+      id: message.id,
+      role: message.role,
+      content: decoded.text,
+      createdAt:
+        typeof message.createdAt === "string"
+          ? message.createdAt
+          : message.createdAt.toISOString(),
+      trace: decoded.trace,
+    };
+  });
 }
 
 export default function BrainChat({
   className = "",
   fillHeight = false,
 }: BrainChatProps) {
-  const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [signedHistory, setSignedHistory] = useState<BrainChatHistoryMessage[]>(
-    []
-  );
-  const [historySignature, setHistorySignature] = useState<string | null>(null);
+  const { currentUser } = useUser();
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [failedMessage, setFailedMessage] = useState<string | null>(null);
+  const [pasteCount, setPasteCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [optimisticUser, setOptimisticUser] =
+    useState<DisplayChatMessage | null>(null);
+  const [streamingReply, setStreamingReply] = useState("");
+  const [titleOverride, setTitleOverride] = useState<string | null>(null);
+  const [traceState, setTraceState] = useState<ChatTraceState>(emptyTraceState);
+  const [liveStatus, setLiveStatus] = useState("Sending to Telos Brain");
+  const [stickToBottom, setStickToBottom] = useState(true);
+  const sendGeneration = useRef(0);
+  const setStreamingReplyRef = useRef(setStreamingReply);
+  setStreamingReplyRef.current = setStreamingReply;
+  const revealerRef = useRef<ReturnType<typeof createTextRevealer> | null>(
+    null
+  );
+  if (revealerRef.current === null) {
+    revealerRef.current = createTextRevealer(chunk => {
+      setStreamingReplyRef.current(current => current + chunk);
+    });
+  }
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const sessionsQuery = useChatSessions();
+  const sessionQuery = useChatSession(activeSessionId);
+  const renameSession = useRenameChatSession();
+  const deleteSession = useDeleteChatSession();
   const chat = useBrainChat();
 
+  const persistedMessages = useMemo(
+    () => toDisplayMessages(sessionQuery.data?.messages ?? []),
+    [sessionQuery.data?.messages]
+  );
+
+  const messages = useMemo(() => {
+    const alreadyPresent = optimisticUser
+      ? persistedMessages.some(
+          message =>
+            message.role === "user" &&
+            message.content === optimisticUser.content
+        )
+      : true;
+    const withUser =
+      optimisticUser && !alreadyPresent
+        ? [...persistedMessages, optimisticUser]
+        : persistedMessages;
+
+    const showFailedTrace =
+      Boolean(error) && !chat.isPending && traceState.steps.length > 0;
+
+    if (!chat.isPending && !streamingReply && !showFailedTrace) return withUser;
+
+    const persistedHasReply =
+      Boolean(streamingReply) &&
+      persistedMessages.some(
+        message =>
+          message.role === "assistant" && message.content === streamingReply
+      );
+    if (persistedHasReply && !chat.isPending) return withUser;
+
+    const snapshot = finalizeTrace(traceState);
+    return [
+      ...withUser,
+      {
+        id: "streaming-assistant",
+        role: "assistant" as const,
+        content: streamingReply,
+        trace: snapshot,
+        live: chat.isPending,
+        liveStatus,
+      },
+    ];
+  }, [
+    optimisticUser,
+    persistedMessages,
+    streamingReply,
+    traceState,
+    liveStatus,
+    chat.isPending,
+    error,
+  ]);
+
+  const precedingUserMessage = (messageId: string) => {
+    const index = messages.findIndex(message => message.id === messageId);
+    return [...messages.slice(0, index)]
+      .reverse()
+      .find(message => message.role === "user");
+  };
+
   useEffect(() => {
+    if (!streamingReply) return;
+    const lastAssistant = [...persistedMessages]
+      .reverse()
+      .find(message => message.role === "assistant");
+    if (lastAssistant?.content === streamingReply) {
+      setStreamingReply("");
+      setOptimisticUser(null);
+      setTraceState(emptyTraceState());
+    }
+  }, [persistedMessages, streamingReply]);
+
+  useEffect(() => {
+    if (!stickToBottom) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, chat.isPending]);
+  }, [messages, chat.isPending, streamingReply, stickToBottom]);
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    const message = input.trim();
-    if (!message || chat.isPending) return;
+  const handleScroll = () => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const distance = node.scrollHeight - node.scrollTop - node.clientHeight;
+    setStickToBottom(distance < 80);
+  };
 
+  const sendMessage = async (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed || chat.isPending) return;
+
+    const message = pasteCount >= 3 ? wrapBankStatement(trimmed) : trimmed;
+
+    const generation = sendGeneration.current + 1;
+    sendGeneration.current = generation;
     setError(null);
+    setFailedMessage(null);
     setInput("");
-
-    const optimisticUser: DisplayMessage = {
-      id: crypto.randomUUID(),
+    setPasteCount(0);
+    setStickToBottom(true);
+    revealerRef.current?.reset();
+    setStreamingReply("");
+    setTraceState(emptyTraceState());
+    setLiveStatus("Sending to Telos Brain");
+    setOptimisticUser({
+      id: "optimistic-user",
       role: "user",
       content: message,
-    };
-    setMessages(prev => [...prev, optimisticUser]);
+      createdAt: new Date().toISOString(),
+    });
 
     try {
       const result = await chat.mutateAsync({
         message,
-        history: signedHistory,
-        historySignature,
+        sessionId: activeSessionId,
+        onSession: sessionId => {
+          if (sendGeneration.current !== generation) return;
+          setActiveSessionId(sessionId);
+        },
+        onDelta: delta => {
+          if (sendGeneration.current !== generation) return;
+          revealerRef.current?.push(delta);
+        },
+        onActivity: event => {
+          if (sendGeneration.current !== generation) return;
+          setTraceState(current => applyTraceEvent(current, event));
+          if (event.type === "status") {
+            setLiveStatus(statusPhaseLabel(event.phase));
+          } else if (event.type === "thinking") {
+            setLiveStatus("Thinking");
+          } else if (event.type === "tool_call") {
+            setLiveStatus(`Using ${event.name}`);
+          } else if (event.type === "text") {
+            setLiveStatus("Writing the answer");
+          }
+        },
       });
-      setSignedHistory(result.history);
-      setHistorySignature(result.historySignature);
-      setMessages(toDisplayMessages(result.history));
+      if (sendGeneration.current !== generation) return;
+      await revealerRef.current?.drain();
+      setActiveSessionId(result.sessionId);
+      setStreamingReply(result.reply);
+      if (result.trace) {
+        setTraceState({
+          steps: result.trace.steps,
+          startedAt: Date.now() - result.trace.elapsedMs,
+          currentThoughtId: null,
+        });
+      }
+      if (result.title) {
+        setTitleOverride(result.title);
+      }
     } catch (err) {
+      if (sendGeneration.current !== generation) return;
       setError(err instanceof Error ? err.message : "Failed to send message.");
-      // Drop the optimistic user bubble on failure.
-      setMessages(toDisplayMessages(signedHistory));
+      setFailedMessage(message);
+      revealerRef.current?.reset();
+      setStreamingReply("");
+      setOptimisticUser({
+        id: "optimistic-user",
+        role: "user",
+        content: message,
+        createdAt: new Date().toISOString(),
+        failed: true,
+      });
     }
   };
 
+  const handleNewChat = () => {
+    sendGeneration.current += 1;
+    revealerRef.current?.reset();
+    setActiveSessionId(null);
+    setOptimisticUser(null);
+    setStreamingReply("");
+    setTitleOverride(null);
+    setTraceState(emptyTraceState());
+    setError(null);
+    setFailedMessage(null);
+    setInput("");
+    setPasteCount(0);
+    setSidebarOpen(false);
+  };
+
+  const handleDelete = (sessionId: string) => {
+    deleteSession.mutate(sessionId, {
+      onSuccess: () => {
+        if (activeSessionId === sessionId) {
+          handleNewChat();
+        }
+      },
+    });
+  };
+
+  const organisationName = currentUser?.organisation?.name;
+  const storedTitle = sessionQuery.data?.session.title;
+  const activeTitle =
+    titleOverride ??
+    (storedTitle && storedTitle !== "New chat"
+      ? storedTitle
+      : optimisticUser
+        ? deriveSessionTitle(optimisticUser.content)
+        : activeSessionId
+          ? "Chat"
+          : "New chat");
+  const isEmpty = messages.length === 0 && !chat.isPending;
+
   return (
-    <BaseCard
-      className={`flex flex-col ${
-        fillHeight
-          ? "h-full min-h-0"
-          : "min-h-[28rem] max-h-[36rem]"
-      } ${className}`}
+    <div
+      className={`${fillHeight ? "h-full min-h-0" : "h-[36rem]"} ${className}`}
     >
-      <div className="flex items-center gap-2 mb-4 shrink-0">
-        <Icon icon="robot" className="w-5 h-5 text-blue-600" />
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Chat</h2>
-          <p className="text-sm text-gray-500">
-            Powered by the Brain <code className="text-xs">WF-CHAT</code>{" "}
-            workflow
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 min-h-0">
-        {messages.length === 0 && !chat.isPending && (
-          <p className="text-sm text-gray-500">
-            Ask anything about your organisation. Messages are sent to Telos
-            Brain and scoped to your current organisation.
-          </p>
-        )}
-
-        {messages.map(message => (
-          <div
-            key={message.id}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white whitespace-pre-wrap"
-                  : "bg-gray-100 text-gray-900 border border-gray-200"
-              }`}
-            >
-              {message.role === "assistant" ? (
-                <ChatMarkdown content={message.content} />
-              ) : (
-                message.content
-              )}
-            </div>
-          </div>
-        ))}
-
-        {chat.isPending && (
-          <div className="flex justify-start">
-            <div className="rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-500 border border-gray-200">
-              Thinking…
-            </div>
-          </div>
-        )}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {error && (
-        <p className="text-sm text-red-600 mb-3 shrink-0" role="alert">
-          {error}
-        </p>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="flex gap-2 items-end shrink-0"
+      <ChatLayout
+        sidebarOpen={sidebarOpen}
+        onCloseSidebar={() => setSidebarOpen(false)}
+        sidebar={
+          <ChatSessionList
+            sessions={sessionsQuery.data ?? []}
+            activeSessionId={activeSessionId}
+            isLoading={sessionsQuery.isLoading}
+            onSelect={sessionId => {
+              sendGeneration.current += 1;
+              revealerRef.current?.reset();
+              setActiveSessionId(sessionId);
+              setOptimisticUser(null);
+              setStreamingReply("");
+              setTitleOverride(null);
+              setTraceState(emptyTraceState());
+              setError(null);
+              setFailedMessage(null);
+              setInput("");
+              setSidebarOpen(false);
+            }}
+            onNewChat={handleNewChat}
+            onRename={(sessionId, title) => {
+              renameSession.mutate({ id: sessionId, title });
+            }}
+            onDelete={sessionId => {
+              void handleDelete(sessionId);
+            }}
+          />
+        }
       >
-        <label htmlFor="brain-chat-input" className="sr-only">
-          Message
-        </label>
-        <textarea
-          id="brain-chat-input"
-          value={input}
-          onChange={event => setInput(event.target.value)}
-          onKeyDown={event => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void handleSubmit(event);
-            }
-          }}
-          rows={2}
-          placeholder="Type a message…"
-          disabled={chat.isPending}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none text-black text-sm resize-none disabled:opacity-50"
-        />
-        <Button
-          type="submit"
-          loading={chat.isPending}
-          disabled={!input.trim() || chat.isPending}
-          className="shrink-0"
-        >
-          <span className="inline-flex items-center gap-2">
-            <Icon icon="paperPlane" className="w-4 h-4" />
-            Send
+        <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-b border-gray-100 px-6 py-2.5">
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 md:hidden"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open chats"
+          >
+            <Icon icon="bars" className="h-4 w-4" />
+          </button>
+          <span className="truncate text-[15px] font-semibold leading-[22px] text-gray-900">
+            {activeTitle}
           </span>
-        </Button>
-      </form>
-    </BaseCard>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-200 bg-gray-50 px-[7px] py-0.5 font-mono text-[11px] leading-4 text-gray-500">
+            WF-CHAT
+          </span>
+        </div>
+
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="min-h-0 flex-1 overflow-y-auto px-6 pb-2 pt-8"
+        >
+          <div className="mx-auto flex max-w-[760px] flex-col gap-7">
+            {isEmpty && (
+              <div className="flex flex-col items-center gap-5 px-0 pb-2 pt-12 text-center">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+                  <Icon
+                    icon="comments"
+                    className="h-[18px] w-[18px] text-blue-600"
+                  />
+                </div>
+                <div className="flex max-w-[460px] flex-col gap-2">
+                  <h1 className="text-[22px] font-semibold leading-[30px] tracking-[-0.01em] text-gray-900">
+                    What would you like to know?
+                  </h1>
+                  <p className="text-sm leading-[22px] text-pretty text-gray-500">
+                    Ask about your spending, budgets, or transactions. We'll
+                    only use the numbers for this account.
+                  </p>
+                </div>
+                <div className="mt-1 grid w-full max-w-[560px] grid-cols-1 gap-2 sm:grid-cols-2">
+                  {SUGGESTIONS.map(suggestion => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => {
+                        void sendMessage(suggestion);
+                      }}
+                      className="rounded-[10px] border border-gray-200 bg-white px-[13px] py-[11px] text-left text-[13.5px] leading-5 text-gray-900 hover:border-gray-300 hover:bg-gray-50"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map(message => {
+              const isStreaming = message.id === "streaming-assistant";
+              const priorUser = precedingUserMessage(message.id);
+              const retryContent = message.failed
+                ? failedMessage
+                : priorUser?.content;
+
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onRetry={
+                    !isStreaming && retryContent
+                      ? () => {
+                          void sendMessage(retryContent);
+                        }
+                      : undefined
+                  }
+                />
+              );
+            })}
+
+            <div ref={bottomRef} />
+          </div>
+        </div>
+
+        <div className="shrink-0 bg-white px-6 pb-5 pt-3">
+          <div className="mx-auto flex max-w-[760px] flex-col gap-2">
+            {error && (
+              <p className="text-sm text-red-600" role="alert">
+                {error}
+              </p>
+            )}
+            <TransactionPasteNotice
+              count={pasteCount}
+              onDismiss={() => setPasteCount(0)}
+            />
+            <ChatComposer
+              value={input}
+              loading={chat.isPending}
+              organisationName={organisationName}
+              onChange={value => {
+                setInput(value);
+                const count = countBankStatementLines(value);
+                setPasteCount(count >= 3 ? count : 0);
+              }}
+              onPaste={text => {
+                const count = countBankStatementLines(text);
+                if (count >= 3) setPasteCount(count);
+              }}
+              onSubmit={() => {
+                void sendMessage(input);
+              }}
+            />
+          </div>
+        </div>
+      </ChatLayout>
+    </div>
   );
 }

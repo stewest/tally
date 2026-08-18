@@ -16,7 +16,7 @@ export default function AuthLayout({
   const isSettingSidebar = pathname?.startsWith("/organisation-settings");
   const isDashboard = pathname === "/dashboard";
   const isChat = pathname === "/chat";
-  const mainPadding = isDashboard ? "" : isChat ? "p-6 min-h-0" : "p-6";
+  const mainPadding = isDashboard ? "" : isChat ? "min-h-0 p-0" : "p-6";
 
   return (
     <AuthenticationCheck>
@@ -26,9 +26,9 @@ export default function AuthLayout({
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header />
             <main
-              className={`flex-1 overflow-auto bg-gray-50 ${mainPadding} ${
-                isChat ? "flex flex-col" : ""
-              }`}
+              className={`flex-1 overflow-auto ${
+                isChat ? "flex flex-col bg-white" : "bg-gray-50"
+              } ${mainPadding}`}
             >
               {children}
             </main>

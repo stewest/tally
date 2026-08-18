@@ -13,28 +13,28 @@ export default function ChatMarkdown({
   className = "",
 }: ChatMarkdownProps) {
   return (
-    <div className={`chat-markdown text-sm ${className}`}>
+    <div className={`chat-markdown text-[15px] leading-[26px] ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
           ul: ({ children }) => (
-            <ul className="mb-2 last:mb-0 list-disc pl-5 space-y-1">
+            <ul className="mb-3 last:mb-0 flex list-disc flex-col gap-1.5 pl-[22px]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mb-2 last:mb-0 list-decimal pl-5 space-y-1">
+            <ol className="mb-3 last:mb-0 flex list-decimal flex-col gap-1.5 pl-[22px]">
               {children}
             </ol>
           ),
-          li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+          li: ({ children }) => <li className="leading-[26px]">{children}</li>,
           a: ({ href, children }) => (
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline font-medium"
+              className="font-medium text-blue-600 no-underline border-b border-blue-200"
             >
               {children}
             </a>
@@ -78,19 +78,19 @@ export default function ChatMarkdown({
             </blockquote>
           ),
           table: ({ children }) => (
-            <div className="mb-2 last:mb-0 overflow-x-auto">
-              <table className="min-w-full text-xs border-collapse">
+            <div className="mb-3 last:mb-0 overflow-hidden rounded-[10px] border border-gray-200">
+              <table className="w-full border-collapse text-[13px] leading-5 [&_tr:last-child_td]:border-b-0">
                 {children}
               </table>
             </div>
           ),
           th: ({ children }) => (
-            <th className="border border-gray-300 px-2 py-1 text-left font-semibold bg-black/5">
+            <th className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-gray-300 px-2 py-1 align-top">
+            <td className="border-b border-gray-100 px-3 py-2 align-top text-gray-900">
               {children}
             </td>
           ),

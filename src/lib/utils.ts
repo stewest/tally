@@ -12,3 +12,18 @@ export function formatDate(date: string) {
     year: "numeric",
   });
 }
+
+export function formatCurrency(
+  amount: string | number,
+  currency = "NZD"
+): string {
+  const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("en-NZ", {
+    style: "currency",
+    currency,
+  }).format(value);
+}

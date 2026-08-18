@@ -14,15 +14,12 @@ export default function SettingSidebar() {
   const { userRole } = useUser();
 
   const settingsLinks = getSettingsLinks().filter(
-    (link) => !link.requiredRole || hasRequiredRole(userRole, link.requiredRole)
+    link => !link.requiredRole || hasRequiredRole(userRole, link.requiredRole)
   );
 
   const isActive = (path: string) => {
     if (pathname === path) return true;
-    if (
-      path !== "/organisation-settings" &&
-      pathname?.startsWith(`${path}/`)
-    ) {
+    if (path !== "/organisation-settings" && pathname?.startsWith(`${path}/`)) {
       return true;
     }
     return false;
@@ -40,7 +37,7 @@ export default function SettingSidebar() {
             href="/dashboard"
             className="text-lg font-semibold text-gray-900 tracking-tight"
           >
-            App
+            TALLY
           </Link>
         )}
         <button
@@ -68,7 +65,7 @@ export default function SettingSidebar() {
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <ul className="space-y-0">
-          {settingsLinks.map((link) => (
+          {settingsLinks.map(link => (
             <li key={link.path}>
               <Link
                 href={link.path}

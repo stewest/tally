@@ -29,7 +29,7 @@ export default function Sidebar() {
             href="/dashboard"
             className="text-lg font-semibold text-gray-900 tracking-tight"
           >
-            App
+            TALLY
           </Link>
         )}
         <button
@@ -45,11 +45,11 @@ export default function Sidebar() {
         <ul className="space-y-0">
           {getNavigationLinks()
             .filter(
-              (link) =>
+              link =>
                 !link.requiredRole ||
                 hasRequiredRole(userRole, link.requiredRole)
             )
-            .map((navLink) => (
+            .map(navLink => (
               <li key={navLink.path}>
                 <Link
                   href={navLink.path}

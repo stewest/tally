@@ -12,3 +12,45 @@ a,
 button {
   cursor: pointer;
 }
+
+@keyframes chat-dot-pulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.chat-dot-pulse {
+  animation: chat-dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes chat-trace-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.chat-trace-spin {
+  animation: chat-trace-spin 0.8s linear infinite;
+}
+
+@keyframes chat-trace-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-trace-in {
+  animation: chat-trace-in 0.18s ease-out;
+}

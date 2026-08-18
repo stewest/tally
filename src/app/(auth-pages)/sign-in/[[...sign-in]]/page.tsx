@@ -8,9 +8,7 @@ export default function SignInPage() {
       <Suspense>
         <InviteBanner />
       </Suspense>
-      <h1 className="text-2xl font-bold">
-        Welcome to the Vercel Supabase Template
-      </h1>
+      <h1 className="text-2xl font-bold">Welcome to TALLY, your personal finance app.</h1>
       <SignIn />
     </div>
   );
