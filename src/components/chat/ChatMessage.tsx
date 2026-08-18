@@ -68,7 +68,6 @@ export default function ChatMessage({ message, onRetry }: ChatMessageProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         {(message.trace || message.live) && (
           <ChatTraceView
-            key={message.live ? "live" : "done"}
             trace={message.trace ?? { elapsedMs: 0, steps: [] }}
             live={message.live}
             liveStatus={message.liveStatus}
