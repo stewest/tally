@@ -1,9 +1,12 @@
 import {
+  date,
+  numeric,
+  pgEnum,
   pgTable,
   text,
-  uuid,
   timestamp,
-  pgEnum,
+  unique,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 const rolesEnum = pgEnum("roles", ["admin", "member", "super_admin"]);
@@ -14,8 +17,30 @@ const inviteStatusEnum = pgEnum("invite_statuses", [
   "expired",
 ]);
 
+const budgetPeriodEnum = pgEnum("budget_periods", [
+  "weekly",
+  "fortnightly",
+  "monthly",
+  "quarterly",
+  "yearly",
+]);
+
+const transactionSourceEnum = pgEnum("transaction_sources", [
+  "chat_import",
+  "manual",
+  "api",
+]);
+
+const chatMessageRoleEnum = pgEnum("chat_message_roles", ["user", "assistant"]);
+
 // Export the enum objects
-export { inviteStatusEnum, rolesEnum };
+export {
+  budgetPeriodEnum,
+  chatMessageRoleEnum,
+  inviteStatusEnum,
+  rolesEnum,
+  transactionSourceEnum,
+};
 
 // Create convenient enum-like objects for dot notation access
 export const InviteStatus = {
@@ -28,6 +53,25 @@ export const Role = {
   Admin: "admin" as const,
   Member: "member" as const,
   SuperAdmin: "super_admin" as const,
+} as const;
+
+export const BudgetPeriod = {
+  Weekly: "weekly" as const,
+  Fortnightly: "fortnightly" as const,
+  Monthly: "monthly" as const,
+  Quarterly: "quarterly" as const,
+  Yearly: "yearly" as const,
+} as const;
+
+export const TransactionSource = {
+  ChatImport: "chat_import" as const,
+  Manual: "manual" as const,
+  Api: "api" as const,
+} as const;
+
+export const ChatMessageRole = {
+  User: "user" as const,
+  Assistant: "assistant" as const,
 } as const;
 
 export const organisations = pgTable("organisations", {
@@ -91,6 +135,88 @@ export const inviteTokens = pgTable("invite_tokens", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id),
+    occurredAt: date("occurred_at", { mode: "string" }).notNull(),
+    description: text("description").notNull(),
+    merchant: text("merchant"),
+    amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+    currency: text("currency").notNull().default("NZD"),
+    category: text("category"),
+    account: text("account"),
+    source: transactionSourceEnum("source").notNull().default("manual"),
+    notes: text("notes"),
+    dedupeKey: text("dedupe_key").notNull(),
+    importBatchId: uuid("import_batch_id"),
+    createdByUserId: uuid("created_by_user_id").references(() => profiles.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  table => [
+    unique("transactions_org_dedupe_unique").on(
+      table.organisationId,
+      table.dedupeKey
+    ),
+  ]
+);
+
+export const budgets = pgTable(
+  "budgets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id),
+    category: text("category").notNull(),
+    period: budgetPeriodEnum("period").notNull(),
+    amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+    currency: text("currency").notNull().default("NZD"),
+    startsOn: date("starts_on", { mode: "string" }).notNull(),
+    endsOn: date("ends_on", { mode: "string" }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  table => [
+    unique("budgets_org_category_period_start_unique").on(
+      table.organisationId,
+      table.category,
+      table.period,
+      table.startsOn
+    ),
+  ]
+);
+
+export const chatSessions = pgTable("chat_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisationId: uuid("organisation_id")
+    .notNull()
+    .references(() => organisations.id),
+  createdByUserId: uuid("created_by_user_id")
+    .notNull()
+    .references(() => profiles.id),
+  title: text("title").notNull().default("New chat"),
+  lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  archivedAt: timestamp("archived_at"),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id")
+    .notNull()
+    .references(() => chatSessions.id, { onDelete: "cascade" }),
+  role: chatMessageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Essential type exports
 export type Profile = typeof profiles.$inferSelect;
 export type Organisation = typeof organisations.$inferSelect;
@@ -99,6 +225,15 @@ export type Role = (typeof rolesEnum.enumValues)[number];
 export type InviteStatus = (typeof inviteStatusEnum.enumValues)[number];
 export type File = typeof files.$inferSelect;
 export type InviteToken = typeof inviteTokens.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
+export type Budget = typeof budgets.$inferSelect;
+export type NewBudget = typeof budgets.$inferInsert;
+export type ChatSession = typeof chatSessions.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type BudgetPeriod = (typeof budgetPeriodEnum.enumValues)[number];
+export type TransactionSource = (typeof transactionSourceEnum.enumValues)[number];
+export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number];
 // Type for joined data with related entities
 export type MembershipWithUser = {
   membership: Membership;
