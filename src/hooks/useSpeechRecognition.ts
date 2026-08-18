@@ -63,10 +63,7 @@ export function useSpeechRecognition({
     const recognition = new Constructor();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang =
-      typeof navigator !== "undefined" && navigator.language
-        ? navigator.language
-        : "en-US";
+    recognition.lang = "en-US";
 
     recognition.onresult = event => {
       if (!shouldListenRef.current) return;
@@ -84,15 +81,13 @@ export function useSpeechRecognition({
     };
 
     recognition.onerror = event => {
-      if (event.error === "no-speech") {
-        return;
-      }
-      const message = speechRecognitionErrorMessage(event.error);
-      if (event.error === "aborted") {
+      if (!shouldListenRef.current) return;
+      if (event.error === "no-speech" || event.error === "aborted") {
         return;
       }
       shouldListenRef.current = false;
       setIsListening(false);
+      const message = speechRecognitionErrorMessage(event.error);
       if (message) setError(message);
     };
 

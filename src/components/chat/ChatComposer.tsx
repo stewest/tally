@@ -9,7 +9,7 @@ interface ChatComposerProps {
   disabled?: boolean;
   loading?: boolean;
   organisationName?: string;
-  voiceResetKey?: string;
+  voiceResetKey?: number;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onPaste?: (text: string) => void;

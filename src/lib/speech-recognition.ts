@@ -66,8 +66,6 @@ export function speechRecognitionErrorMessage(code: string): string | null {
       return "No microphone was found.";
     case "network":
       return "Voice input needs a network connection.";
-    case "no-speech":
-      return "No speech was detected. Try again.";
     default:
       return "Voice input failed. Try again.";
   }

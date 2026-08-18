@@ -526,7 +526,7 @@ export default function BrainChat({
               value={input}
               loading={chat.isPending}
               organisationName={organisationName}
-              voiceResetKey={String(voiceResetKey)}
+              voiceResetKey={voiceResetKey}
               onChange={value => {
                 setInput(value);
                 const count = countBankStatementLines(value);
