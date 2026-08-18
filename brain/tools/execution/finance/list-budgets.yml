@@ -1,0 +1,21 @@
+name: list_budgets
+version: 1
+description: Lists all category budgets for the current organisation.
+api:
+  method: POST
+  path: /api/tools/listBudgets
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId

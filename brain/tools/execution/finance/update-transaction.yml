@@ -1,0 +1,59 @@
+name: update_transaction
+version: 1
+description: >-
+  Updates a single persisted transaction — typically to correct category,
+  merchant, or amount after import.
+api:
+  method: POST
+  path: /api/tools/updateTransaction
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId
+  - name: transactionId
+    description: The transaction UUID to update.
+    type: string
+    required: true
+  - name: occurredAt
+    description: Optional replacement date (YYYY-MM-DD).
+    type: date
+    required: false
+  - name: description
+    description: Optional replacement description.
+    type: string
+    required: false
+  - name: amount
+    description: Optional replacement signed amount.
+    type: decimal
+    required: false
+  - name: merchant
+    description: Optional replacement merchant.
+    type: string
+    required: false
+  - name: category
+    description: Optional replacement category.
+    type: string
+    required: false
+  - name: account
+    description: Optional replacement account.
+    type: string
+    required: false
+  - name: notes
+    description: Optional replacement notes.
+    type: string
+    required: false
+response-markdown: |
+  Updated transaction {{result.id}} ({{result.description}}, {{result.amount}}, {{result.category}}).
+error-markdown: |
+  Could not update transaction: {{result.result}}

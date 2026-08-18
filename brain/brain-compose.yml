@@ -1,0 +1,87 @@
+name: Starter Brain
+description: >-
+  A clean starter brain schema with the Telos Brain skillbook, execution tools
+  (skills, memory, Q&A) and management tools (schema maintenance).
+
+# Embedding model for semantic search (find_available_skills, blueprint search).
+# The API key comes from this brain's own .env (VOYAGE_API_KEY for voyage-*).
+embedding-model: voyage-3-lite
+
+# Learning loop intensity. high enables auto-run of inbox workflows whose
+# triggers declare a :high (or lower) learning-mode qualifier (BRA122 / BRA404).
+learning-mode: high
+
+# Checkpoints: weekly schedule plus a snapshot before each deploy.
+checkpoint-strategy: Daily,BeforeDeploy
+
+# Shared outbound host allowlist for async run callbacks and declared-tool
+# webhooks (BRA201 §4.3). Defaults cover local harnesses: Brain-in-Docker
+# reaches the host app via host.docker.internal (BRA106). Add production
+# harness hosts here before deploying tools against them.
+allowed-callback-domains:
+  - host.docker.internal
+  - localhost
+  - 127.0.0.1
+
+# Entities: top-level things the brain reasons about (multi-tenancy anchor).
+entities:
+  - code: organisation
+    name: Organisation
+    description: The host application organisation this brain is scoped to
+  - code: clients
+    name: Clients
+    description: A client of the business
+
+# Units of work: scoped pieces of work that trigger learning on completion.
+unitsofwork:
+  - code: jobs
+    name: Jobs
+    scope: entity:clients
+
+# Connectors are named integrations with external services (REST/MCP). Each file
+# under connectors/ declares URL, auth type, scope and required auth parameters.
+# Secret values are not stored here — they go in .env / BrainEnvironmentVariables
+# (BRA202 / BRA209). Unlisted connector files are not deployed.
+connectors:
+  - connectors/my-app.yml
+
+# Tools are split into execution (runtime) and management (brain maintenance).
+tools:
+  - tools/execution/skills/tools.yml
+  - tools/execution/memory/tools.yml
+  - tools/execution/qa/tools.yml
+  - tools/execution/native/tools.yml
+  - tools/execution/inbox/tools.yml
+  - tools/execution/simulation/tools.yml
+  - tools/execution/my-app/tools.yml
+  - tools/execution/finance/tools.yml
+  - tools/management/schema/tools.yml
+
+skills:
+  - skills/telos-brain/skillbook.yml
+  - skills/business/skillbook.yml
+
+blueprints:
+  - blueprints/memory/blueprint.yml
+  - blueprints/company/blueprint.yml
+  - blueprints/clients/blueprint.yml
+  - blueprints/personal-finance/blueprint.yml
+
+workflows:
+  - workflows/system-prompt.md
+  - workflows/chat.md
+  - workflows/chat-title.md
+  - workflows/finance-review.md
+  - workflows/ask-question.md
+  - workflows/create-frame-of-reference.md
+  - workflows/review-unit-of-work.md
+  - workflows/review-blueprint.md
+  - workflows/research.md
+  - workflows/eval.md
+  - workflows/wf-sim.md
+  - workflows/wf-compact.md
+  - workflows/Maintenance/brain-system.md
+  - workflows/Maintenance/triage.md
+  - workflows/Maintenance/update-skill.md
+  - workflows/Maintenance/update-workflow.md
+  - workflows/Maintenance/update-brain.md

@@ -1,0 +1,55 @@
+name: upsert_budget
+version: 1
+description: >-
+  Creates or updates a category budget. Unique on organisation, category,
+  period and startsOn.
+api:
+  method: POST
+  path: /api/tools/upsertBudget
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId
+  - name: category
+    description: Spending category this budget applies to, e.g. Groceries.
+    type: string
+    required: true
+  - name: period
+    description: Budget period — weekly, fortnightly, monthly, quarterly or yearly.
+    type: string
+    required: true
+  - name: amount
+    description: Budget limit as a positive number.
+    type: decimal
+    required: true
+  - name: startsOn
+    description: Period start date (YYYY-MM-DD).
+    type: date
+    required: true
+  - name: endsOn
+    description: Optional end date (YYYY-MM-DD) after which the budget no longer applies.
+    type: date
+    required: false
+  - name: notes
+    description: Optional notes about the budget.
+    type: string
+    required: false
+  - name: currency
+    description: Optional ISO currency code. Defaults to NZD.
+    type: string
+    required: false
+response-markdown: |
+  Budget saved for {{result.category}} ({{result.period}} {{result.amount}} from {{result.startsOn}}).
+error-markdown: |
+  Could not save budget: {{result.result}}

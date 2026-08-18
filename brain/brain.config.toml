@@ -1,0 +1,9 @@
+# Telos Brain local development configuration (BRA236).
+# Created by `brain start` — analogous to supabase/config.toml.
+
+[local]
+project_id = "brain-vercel-supabase-template"
+instance = "local-brain"
+api_port = 60061
+sql_port = 1433
+image = "supporttelosready/telos-brain:latest"

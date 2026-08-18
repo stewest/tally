@@ -1,0 +1,37 @@
+name: record_transactions
+version: 2
+description: >-
+  Persists one or more parsed bank transactions for the current organisation.
+  Amounts are signed (negative = spend, positive = income). Re-importing the
+  same date + amount + description is idempotent and counted as skipped. Pass
+  `transactions` as a JSON array string — Brain API tools have no array type.
+api:
+  method: POST
+  path: /api/tools/recordTransactions
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId
+  - name: transactions
+    description: >-
+      JSON array string of transactions to record. Example:
+      [{"occurredAt":"2026-08-03","description":"Countdown Grey Lynn","amount":-86.42,"merchant":"Countdown","category":"Groceries"}].
+      Each item needs occurredAt (YYYY-MM-DD), description, amount (signed
+      number), and optional merchant, category, account, notes.
+    type: string
+    required: true
+response-markdown: |
+  Recorded {{result.inserted}} transactions ({{result.skipped}} skipped as duplicates). Batch {{result.importBatchId}}.
+error-markdown: |
+  Could not record transactions: {{result.result}}

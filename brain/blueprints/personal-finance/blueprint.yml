@@ -1,0 +1,10 @@
+name: Personal Finance
+version: 1
+scope: brain
+categories:
+  - name: Categories
+    description: Transaction category taxonomy and categorisation rules.
+  - name: Budgeting
+    description: Budget targets, spending limits, and review cadence.
+  - name: Insights
+    description: Distilled financial insights the brain has learned from reviews.

@@ -1,0 +1,31 @@
+name: get_spend_summary
+version: 1
+description: >-
+  Returns spend totals by category plus current-period budget progress for the
+  organisation.
+api:
+  method: POST
+  path: /api/tools/getSpendSummary
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId
+  - name: fromDate
+    description: Optional start date for the category totals (YYYY-MM-DD).
+    type: date
+    required: false
+  - name: toDate
+    description: Optional end date for the category totals (YYYY-MM-DD).
+    type: date
+    required: false

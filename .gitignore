@@ -33,6 +33,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# Local Brain Docker runtime (compose state, encryption key)
+brain/.brain/
+
 # vercel
 .vercel
 

@@ -1,0 +1,47 @@
+name: list_transactions
+version: 1
+description: >-
+  Lists organisation transactions, optionally filtered by date range, category,
+  account or search text.
+api:
+  method: POST
+  path: /api/tools/listTransactions
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId
+  - name: fromDate
+    description: Optional start date (YYYY-MM-DD).
+    type: date
+    required: false
+  - name: toDate
+    description: Optional end date (YYYY-MM-DD).
+    type: date
+    required: false
+  - name: category
+    description: Optional spending category filter, e.g. Groceries.
+    type: string
+    required: false
+  - name: account
+    description: Optional account name filter.
+    type: string
+    required: false
+  - name: search
+    description: Optional search against description and merchant.
+    type: string
+    required: false
+  - name: limit
+    description: Optional maximum number of rows to return (default 500).
+    type: int
+    required: false
