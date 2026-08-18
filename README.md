@@ -1,58 +1,52 @@
-# Vercel Brain Supabase Template
+# TALLY: Vercel Brain Supabase Template Demo
 
-A multitenant host app template built with Next.js, Clerk, and Supabase. AI workflows, skills, and tools live in a separately deployed [Telos Brain](https://go.telosbrain.com) (schema from `brain init`); this app calls the Brain Execution API and exposes Tool API webhooks for Brain callbacks.
+A Demo personal-finance app/ (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/`. After sign-in you get **Dashboard**, **Chat**, **Transactions**, and **Budgets**. Clone this repo, run everything locally, then deploy the same app and brain schema to stage/prod.
+
+| Environment | App | Brain |
+|---|---|---|
+| **Dev (local)** | `npm run dev` + Clerk + local Supabase | Docker on your machine (`brain start`) |
+| **Stage / prod** | Your host (e.g. Vercel) + hosted Supabase | [Telos Hosted](https://go.telosbrain.com) ($10 free credit) |
+
+Local Brain is self-hosted Docker. Clerk is required locally — it authenticates the host app. Local Brain itself does not use Clerk.
+
+After setup you can sign in, open **Chat**, and paste a bank statement (`samples/bank-statement.txt`).
 
 ## Prerequisites
 
-- Node.js v20 or higher (check `.nvmrc` for the exact version)
-- Docker (Desktop)
-- Supabase CLI (`brew install supabase/tap/supabase`)
-- A [Clerk](https://clerk.com) account and application
+- Node.js 25+ (see `.nvmrc`)
+- Docker Desktop (or Engine + Compose on Linux)
+- [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) (`brew install supabase/tap/supabase`)
+- A [Clerk](https://clerk.com) account
+- An [Anthropic](https://console.anthropic.com) API key
+- A [Voyage](https://dash.voyageai.com) API key (embeddings; this brain defaults to `voyage-3-lite`)
 
-## Getting Started
-
-### Clone and Install
+## 1. Clone and install
 
 ```bash
 git clone <repository-url>
 cd <your-repository-folder>
 npm install
-```
-
-### Environment Setup
-
-```bash
 cp .env.example .env
 ```
 
-Fill in the following values:
+Do not commit `.env` files. Optional app vars (already defaulted in code):
 
-| Variable | Source |
-|---|---|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | [Clerk Dashboard](https://dashboard.clerk.com) > API Keys |
-| `CLERK_SECRET_KEY` | [Clerk Dashboard](https://dashboard.clerk.com) > API Keys |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase CLI output or Dashboard |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase CLI **Publishable** key (`sb_publishable_...`) |
-| `SUPABASE_SECRET_KEY` | Supabase CLI **Secret** key (`sb_secret_...`) — server only |
-| `POSTGRES_URL` | Supabase CLI output or Dashboard |
-| `BRAIN_URL` | Telos Brain execution host (see Telos Brain below) |
-| `BRAIN_API_KEY` | Per-brain key from first `brain deploy` |
-| `TOOL_API_KEY` | Shared webhook secret for `/api/tools/*` (paired with `BRAIN_API_KEY` handshake) |
+| Variable | Default | Used for |
+|---|---|---|
+| `NEXT_PUBLIC_APP_NAME` | `TALLY` | Invite emails and display name |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Invite links. Set this to your public URL on stage/prod. |
 
-> **Note:** Do not commit your `.env` file to version control.
+Postmark (`POSTMARK_SERVER_TOKEN`, `FROM_EMAIL`) is only required when inviting teammates, not for first chat.
 
-### Clerk Setup
+## 2. Clerk (required locally)
 
-1. Create a Clerk application at [dashboard.clerk.com](https://dashboard.clerk.com)
-2. Navigate to [Clerk's Connect with Supabase page](https://dashboard.clerk.com/setup/supabase)
-3. Select your application and click **Activate Supabase integration**
-4. Copy the Clerk domain provided (e.g. `your-app.clerk.accounts.dev`)
-5. In the [Supabase Dashboard](https://supabase.com/dashboard), go to **Authentication > Third-Party Auth** and add Clerk as a provider using that domain
-
-### Local Database Setup
-
-1. Open Docker Desktop
-2. Update `supabase/config.toml` with your Clerk domain (from the Clerk Setup step above):
+1. Create an application at [dashboard.clerk.com](https://dashboard.clerk.com).
+2. Copy the **Publishable** and **Secret** keys into `.env`:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+   - `CLERK_SECRET_KEY`
+3. Open [Clerk’s Connect with Supabase](https://dashboard.clerk.com/setup/supabase), select the app, and **Activate Supabase integration**.
+4. Copy the Clerk domain (e.g. `your-app.clerk.accounts.dev`).
+5. Put that domain in `supabase/config.toml`:
 
 ```toml
 [auth.third_party.clerk]
@@ -60,148 +54,195 @@ enabled = true
 domain = "your-app.clerk.accounts.dev"
 ```
 
-3. Start Supabase:
+For hosted Supabase (stage/prod), also add Clerk as a third-party provider in the [Supabase Dashboard](https://supabase.com/dashboard) under **Authentication → Third-Party Auth**.
+
+## 3. Local database
+
+1. Open Docker Desktop.
+2. Start Supabase (first run may take several minutes):
 
 ```bash
-supabase start         # First run may take several minutes
+supabase start
 ```
 
-4. Update your `.env` file with the values from Supabase initialization:
-   - `NEXT_PUBLIC_SUPABASE_URL` - The Project URL (API URL)
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` - The **Publishable** key (`sb_publishable_...`)
-   - `SUPABASE_SECRET_KEY` - The **Secret** key (`sb_secret_...`, server-only)
-   - `POSTGRES_URL` - The database connection URL
+3. Copy these values from the CLI output into `.env`:
+   - `NEXT_PUBLIC_SUPABASE_URL` — API URL
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Publishable key (`sb_publishable_…`)
+   - `SUPABASE_SECRET_KEY` — Secret key (`sb_secret_…`, server only)
+   - `POSTGRES_URL` — database URL
 
-> Legacy `anon` / `service_role` JWT keys are deprecated. Use publishable and secret keys from the Authentication Keys section of `supabase start` (or Dashboard → Settings → API Keys).
+   Use publishable/secret keys, not legacy `anon` / `service_role` JWTs.
 
-5. Run database migrations:
+4. Apply the schema:
 
 ```bash
-npm run db:migrate
+npm run db:push
 ```
 
-6. Enable Row Level Security (RLS) on all tables:
+Local development uses `db:push`. On hosted Postgres, apply migrations with `npm run db:migrate`.
 
-```sql
-DO $$
-DECLARE
-    tbl RECORD;
-BEGIN
-    FOR tbl IN
-        SELECT schemaname, tablename
-        FROM pg_tables
-        WHERE schemaname = 'public'
-    LOOP
-        EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY;', tbl.schemaname, tbl.tablename);
-        RAISE NOTICE 'Enabled RLS on %.%', tbl.schemaname, tbl.tablename;
-    END LOOP;
-END $$;
-```
+## 4. Local Brain (dev)
 
-> You can visit the Studio URL provided by Supabase CLI to manage your database.
-
-### Storage Policies Setup
-
-#### Setting up storage.buckets and storage.object policies:
-
-1. In the Supabase dashboard, go to **Storage** > **Policies**
-2. Under **storage.buckets**, click **New Policy**
-3. Select **From Template**
-4. Choose **Enable insert for authenticated users only**
-
-## Database Migrations
-
-### Generate a new migration
-
-```bash
-npm run db:generate
-```
-
-### Apply migrations
-
-```bash
-npm run db:migrate
-```
-
-## Telos Brain
-
-This template does **not** ship a `brain/` schema folder. Author and deploy the brain separately with the Telos Brain CLI, then point this app at the Execution API.
-
-### 1. Install the CLI
-
-Requires **Node.js 25+**.
+The schema already lives in `brain/`. You do not run `brain init`.
 
 ```bash
 npm install -g @telos.ready/brain
+cd brain
+brain start
 ```
 
-### 2. Scaffold a starter brain
+`brain start` boots SQL Server + Brain in Docker, writes `brain/.env.local` if missing, and opens the admin UI at [http://127.0.0.1:60061](http://127.0.0.1:60061) (no sign-in).
+
+Fill in `brain/.env.local`:
 
 ```bash
-brain init                 # creates ./brain
-# or: brain init my-brain
+ANTHROPIC_API_KEY=your-anthropic-api-key
+VOYAGE_API_KEY=your-voyage-api-key
+MY_APP_API_URL=http://host.docker.internal:3000
+MY_APP_API_KEY=your-shared-tool-api-key
 ```
 
-Requires GitHub SSH access to the private starter template (`git@github.com:telos-brain/starter-brain.git`). Override with `--template <url>` or `TELOS_STARTER_BRAIN_URL` if needed.
-
-Edit the schema so that:
-
-- An entity type with deploy code `organisation` exists, with a variable key `organisationId` (this app maps each org to that entity).
-- Tools that should call back into this host use `api.path` like `/api/tools/{toolId}` and inject `organisationId` from the entity variable.
-- Tool requests use a **dual-secret handshake**: `Authorization: Bearer <TOOL_API_KEY>` and `X-Brain-Authorization: Bearer <BRAIN_API_KEY>` (both stored in the brain `.env` and injected via `secret:`).
-
-Keep the brain schema in a separate repo or local folder — do not commit it into this template.
-
-### 3. Deploy the brain
-
-Mint an organisation API key (admin) via the Management API, then:
+Leave the `TELOS_*` values that `brain start` wrote — they are the well-known local org key and `http://127.0.0.1:60061`. `TELOS_*` is CLI config only; it is never uploaded to the brain.
 
 ```bash
-# In the brain schema folder .env (not this app's .env)
-TELOS_ORG_API_KEY=tbk_...
-TELOS_API_URL=https://go.telosbrain.com
-
-brain deploy --instance <your-instance-name>
+brain deploy --env local --instance local-brain
 ```
 
-On first deploy the CLI prints the **per-brain execution API key once**. Copy it into this app's `.env` as `BRAIN_API_KEY`, and set `BRAIN_URL` to the execution host.
+**Copy the Brain execution API key from stdout immediately.** First deploy prints it once. Put the same value in:
 
-### 4. App ↔ Brain wiring
+- app `.env` → `BRAIN_API_KEY`
+- `brain/.env.local` → `BRAIN_API_KEY`
+
+Then deploy again so the brain stores it for tool callbacks:
+
+```bash
+brain deploy --env local --instance local-brain
+```
+
+Do not delete `brain.lock`. Run `brain snapshot --env local --instance local-brain` before later deploys if the live brain has learned (avoids version conflicts).
+
+Use `host.docker.internal`, not `localhost`, for `MY_APP_API_URL`. Brain runs inside Docker; `localhost` inside the container is Brain, not Next.js.
+
+## 5. Pair the app and Brain
+
+In the **app** `.env`:
+
+```bash
+BRAIN_URL=http://127.0.0.1:60061
+BRAIN_API_KEY=your-brain-execution-api-key
+TOOL_API_KEY=your-shared-tool-api-key
+```
+
+`TOOL_API_KEY` (app) and `MY_APP_API_KEY` (brain) must be the same string. `BRAIN_API_KEY` must match on both sides.
 
 | Direction | Auth | Purpose |
 |---|---|---|
-| App → Brain Execution API | `Authorization: Bearer ${BRAIN_API_KEY}` | Create entities, run workflows (`src/server/brain/`) |
-| Brain → App tools | `Authorization: Bearer ${TOOL_API_KEY}` **and** `X-Brain-Authorization: Bearer ${BRAIN_API_KEY}` | Invoke host tools at `/api/tools/{toolId}` |
+| App → Brain Execution API | `Authorization: Bearer ${BRAIN_API_KEY}` | Create entities, run workflows |
+| Brain → App `/api/tools/*` | `Authorization: Bearer ${TOOL_API_KEY}` **and** `X-Brain-Authorization: Bearer ${BRAIN_API_KEY}` | Finance and host tools |
 
-On organisation create, the app fail-soft creates a Brain entity and caches its id on `organisations.brain_entity_id`. If `BRAIN_URL` / `BRAIN_API_KEY` are unset (local UI-only work), entity creation is skipped.
+If `BRAIN_URL` / `BRAIN_API_KEY` are unset, the app still runs; organisation entity creation and chat are skipped.
 
-#### Tool webhook contract (dual-secret handshake)
+## 6. Run the app
 
-Only a caller that knows **both** the tool webhook secret and this brain's execution key can invoke tools:
-
-```http
-POST /api/tools/getUsers
-Authorization: Bearer <TOOL_API_KEY>
-X-Brain-Authorization: Bearer <BRAIN_API_KEY>
-Content-Type: application/json
-
-{ "organisationId": "<app-org-uuid>" }
-```
-
-Host tool definitions live in the local brain schema under `brain/tools/host/` (gitignored with the rest of `brain/`). Set `TOOL_API_KEY` + `BRAIN_API_KEY` in the brain `.env`, point each tool’s `api.path` at your public app URL, then `brain deploy`.
-
-App-side implementation: `getUsers` in `src/server/tools/host-tools.ts`.
-
-The app sidebar links to `/chat`, a full-page chat UI that calls
-`POST /api/ai/chat`, which runs the starter-brain workflow `WF-CHAT`
-(`brain/workflows/chat.md`) scoped to the current organisation entity.
-
-After changing `brain/brain-compose.yml` (e.g. adding the `organisation` entity),
-redeploy:
+From the repo root (not `brain/`):
 
 ```bash
-brain deploy --instance <your-instance-name>
+npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000), sign in with Clerk, create an organisation, then:
+
+1. Open **Chat** and send a message (workflow `WF-CHAT`). Chats persist in the sidebar; titles are generated automatically (`WF-CHAT-TITLE`). You can watch tools run while Brain works.
+2. Paste `samples/bank-statement.txt` into chat, or use **Transactions** / **Budgets**.
+
+You should now have three processes: Next.js `:3000`, Supabase (CLI ports), Brain `:60061`.
+
+```bash
+brain status    # API URL, health, Compose project id
+# later:
+brain stop --project-id <id-from-status>
+```
+
+## Stage and production (Telos Hosted)
+
+Use local Docker Brain for **dev** only. For **stage** and **prod**, deploy the same `brain/` schema to [Telos Hosted](https://go.telosbrain.com). Sign up there (includes $10 free credit) and mint an organisation API key.
+
+```bash
+cp brain/.env.example brain/.env.stage   # or .env.prod
+```
+
+Set at least:
+
+```bash
+TELOS_BRAIN_ORG_API_KEY=your-org-api-key
+TELOS_BRAIN_API_URL=https://go.telosbrain.com
+ANTHROPIC_API_KEY=your-anthropic-api-key
+VOYAGE_API_KEY=your-voyage-api-key
+MY_APP_API_URL=https://your-app.example.com
+MY_APP_API_KEY=your-shared-tool-api-key
+```
+
+Add your public app hostname to `allowed-callback-domains` in `brain/brain-compose.yml`, then:
+
+```bash
+cd brain
+brain deploy --env stage --instance your-stage-brain
+# or:
+brain deploy --env prod --instance your-prod-brain
+```
+
+First hosted deploy prints a **new** execution API key (do not reuse the local one). On the deployed app (Vercel or your host) set:
+
+```bash
+BRAIN_URL=https://go.telosbrain.com
+BRAIN_API_KEY=your-hosted-brain-execution-api-key
+TOOL_API_KEY=your-shared-tool-api-key
+NEXT_PUBLIC_SITE_URL=https://your-app.example.com
+NEXT_PUBLIC_APP_NAME=TALLY
+```
+
+Keep `TOOL_API_KEY` / `MY_APP_API_KEY` and both `BRAIN_API_KEY`s in sync per environment. Use a different instance name from `local-brain`.
+
+Deploy the Next.js app as usual. Set Clerk, Supabase, `POSTGRES_URL`, Brain, and `NEXT_PUBLIC_SITE_URL` for Preview and Production. Apply schema with `npm run db:migrate` against hosted Postgres (add it to the Vercel build command if you want it to run automatically).
+
+Self-hosted Docker Brain on your own servers is the same stack as local (`brain start` / BRA106). Stage and prod in this template are intended to use Telos Hosted.
+
+## Database migrations
+
+```bash
+npm run db:push       # local: apply schema.ts directly
+npm run db:generate   # write a migration for deploy
+npm run db:migrate    # apply migrations (Vercel / production)
+```
+
+Do not commit `.env`, `brain/.env.local`, `brain/.env.stage`, `brain/.env.prod`, or `brain.lock` if it contains keys.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| Chat: Brain is not configured | App `.env` missing `BRAIN_URL` or `BRAIN_API_KEY` |
+| Tools never hit Next.js | `MY_APP_API_URL` used `localhost` instead of `http://host.docker.internal:3000` |
+| Tool webhook 401 | `TOOL_API_KEY` ≠ `MY_APP_API_KEY`, or Brain keys differ |
+| Deploy fails on embeddings | Blank `VOYAGE_API_KEY` in the brain env file |
+| Port 1433 already allocated | Change `sql_port` in `brain/brain.config.toml`, then `brain start` again |
+| Version conflict on redeploy | `brain snapshot --env local --instance local-brain` then deploy |
+
+Schema edits under `brain/` go live with another `brain deploy --env local` (dev) or `--env stage` / `--env prod` (hosted). Details: [`brain/README.md`](brain/README.md) and skill **BRA106**.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org/) — React framework
+- [Clerk](https://clerk.com/) — Authentication (required locally and in production)
+- [Supabase](https://supabase.com/) — Database and storage
+- [Drizzle ORM](https://orm.drizzle.team/) — Database ORM
+- [Telos Brain](https://go.telosbrain.com) — Local Docker (dev) or Telos Hosted (stage/prod)
+- [TailwindCSS](https://tailwindcss.com/) — CSS framework
+- [TypeScript](https://www.typescriptlang.org/) — Type safety
+
+## Additional information
+
+Database schema: `db/schema.ts`.
 
 Server helpers:
 
@@ -215,31 +256,4 @@ if (entityId) {
 }
 ```
 
-## Development
-
-```bash
-npm run dev
-```
-
-Your application will be available at [http://localhost:3000](http://localhost:3000)
-
-## Building for Production
-
-```bash
-npm run build
-npm run start
-```
-
-## Tech Stack
-
-- [Next.js](https://nextjs.org/) - React framework
-- [Clerk](https://clerk.com/) - Authentication
-- [Supabase](https://supabase.com/) - Database and storage
-- [Drizzle ORM](https://orm.drizzle.team/) - Database ORM
-- [Telos Brain](https://go.telosbrain.com) - External AI brain (Execution API + Tool webhooks)
-- [TailwindCSS](https://tailwindcss.com/) - CSS framework
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-
-## Additional Information
-
-For more details about the database schema, check `db/schema.ts`.
+Host tools live in `src/server/tools/host-tools.ts`. Brain tool definitions are under `brain/tools/execution/finance/` and `brain/tools/execution/my-app/`.
