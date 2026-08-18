@@ -44,6 +44,29 @@ interface BrainChatProps {
   fillHeight?: boolean;
 }
 
+function persistedReplyForTurn(
+  persisted: DisplayChatMessage[],
+  userContent: string | undefined
+): DisplayChatMessage | undefined {
+  if (persisted.length === 0) return undefined;
+
+  if (!userContent) {
+    const last = persisted[persisted.length - 1];
+    return last?.role === "assistant" ? last : undefined;
+  }
+
+  let lastUserIndex = -1;
+  persisted.forEach((message, index) => {
+    if (message.role === "user" && message.content === userContent) {
+      lastUserIndex = index;
+    }
+  });
+  if (lastUserIndex === -1) return undefined;
+  return persisted
+    .slice(lastUserIndex + 1)
+    .find(message => message.role === "assistant");
+}
+
 function toDisplayMessages(
   messages: Array<{
     id: string;
@@ -92,11 +115,16 @@ export default function BrainChat({
   const [optimisticUser, setOptimisticUser] =
     useState<DisplayChatMessage | null>(null);
   const [streamingReply, setStreamingReply] = useState("");
+  const [isRevealing, setIsRevealing] = useState(false);
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [traceState, setTraceState] = useState<ChatTraceState>(emptyTraceState);
   const [liveStatus, setLiveStatus] = useState("Sending to Telos Brain");
   const [stickToBottom, setStickToBottom] = useState(true);
+  const [voiceResetKey, setVoiceResetKey] = useState(0);
   const sendGeneration = useRef(0);
+  const assistantTurnId = useRef(0);
+  const thisTurnPersistedId = useRef<string | null>(null);
+  const streamingReplyRef = useRef("");
   const setStreamingReplyRef = useRef(setStreamingReply);
   setStreamingReplyRef.current = setStreamingReply;
   const revealerRef = useRef<ReturnType<typeof createTextRevealer> | null>(
@@ -104,7 +132,11 @@ export default function BrainChat({
   );
   if (revealerRef.current === null) {
     revealerRef.current = createTextRevealer(chunk => {
-      setStreamingReplyRef.current(current => current + chunk);
+      setStreamingReplyRef.current(current => {
+        const next = current + chunk;
+        streamingReplyRef.current = next;
+        return next;
+      });
     });
   }
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -122,8 +154,23 @@ export default function BrainChat({
   );
 
   const messages = useMemo(() => {
+    const showFailedTrace =
+      Boolean(error) && !chat.isPending && traceState.steps.length > 0;
+    const persistedTurnReply = persistedReplyForTurn(
+      persistedMessages,
+      optimisticUser?.content
+    );
+    const showLive =
+      chat.isPending || isRevealing || Boolean(streamingReply) || showFailedTrace;
+    const visiblePersisted =
+      showLive && persistedTurnReply && !error
+        ? persistedMessages.filter(
+            message => message.id !== persistedTurnReply.id
+          )
+        : persistedMessages;
+
     const alreadyPresent = optimisticUser
-      ? persistedMessages.some(
+      ? visiblePersisted.some(
           message =>
             message.role === "user" &&
             message.content === optimisticUser.content
@@ -131,21 +178,10 @@ export default function BrainChat({
       : true;
     const withUser =
       optimisticUser && !alreadyPresent
-        ? [...persistedMessages, optimisticUser]
-        : persistedMessages;
+        ? [...visiblePersisted, optimisticUser]
+        : visiblePersisted;
 
-    const showFailedTrace =
-      Boolean(error) && !chat.isPending && traceState.steps.length > 0;
-
-    if (!chat.isPending && !streamingReply && !showFailedTrace) return withUser;
-
-    const persistedHasReply =
-      Boolean(streamingReply) &&
-      persistedMessages.some(
-        message =>
-          message.role === "assistant" && message.content === streamingReply
-      );
-    if (persistedHasReply && !chat.isPending) return withUser;
+    if (!showLive) return withUser;
 
     const snapshot = finalizeTrace(traceState);
     return [
@@ -155,7 +191,7 @@ export default function BrainChat({
         role: "assistant" as const,
         content: streamingReply,
         trace: snapshot,
-        live: chat.isPending,
+        live: chat.isPending || isRevealing,
         liveStatus,
       },
     ];
@@ -163,6 +199,7 @@ export default function BrainChat({
     optimisticUser,
     persistedMessages,
     streamingReply,
+    isRevealing,
     traceState,
     liveStatus,
     chat.isPending,
@@ -177,16 +214,28 @@ export default function BrainChat({
   };
 
   useEffect(() => {
-    if (!streamingReply) return;
-    const lastAssistant = [...persistedMessages]
-      .reverse()
-      .find(message => message.role === "assistant");
-    if (lastAssistant?.content === streamingReply) {
-      setStreamingReply("");
-      setOptimisticUser(null);
-      setTraceState(emptyTraceState());
+    const persistedTurnReply = persistedReplyForTurn(
+      persistedMessages,
+      optimisticUser?.content
+    );
+    if (persistedTurnReply) {
+      thisTurnPersistedId.current = persistedTurnReply.id;
     }
-  }, [persistedMessages, streamingReply]);
+  }, [persistedMessages, optimisticUser]);
+
+  useEffect(() => {
+    if (error || isRevealing || chat.isPending) return;
+    const persistedTurnReply = persistedReplyForTurn(
+      persistedMessages,
+      optimisticUser?.content
+    );
+    if (!persistedTurnReply) return;
+    revealerRef.current?.reset();
+    streamingReplyRef.current = "";
+    setStreamingReply("");
+    setOptimisticUser(null);
+    setTraceState(emptyTraceState());
+  }, [persistedMessages, optimisticUser, error, isRevealing, chat.isPending]);
 
   useEffect(() => {
     if (!stickToBottom) return;
@@ -214,7 +263,11 @@ export default function BrainChat({
     setPasteCount(0);
     setStickToBottom(true);
     revealerRef.current?.reset();
+    streamingReplyRef.current = "";
+    assistantTurnId.current += 1;
+    thisTurnPersistedId.current = null;
     setStreamingReply("");
+    setIsRevealing(true);
     setTraceState(emptyTraceState());
     setLiveStatus("Sending to Telos Brain");
     setOptimisticUser({
@@ -252,8 +305,14 @@ export default function BrainChat({
       });
       if (sendGeneration.current !== generation) return;
       await revealerRef.current?.drain();
+      if (!streamingReplyRef.current && result.reply) {
+        revealerRef.current?.push(result.reply);
+        await revealerRef.current?.drain();
+      }
+      if (sendGeneration.current !== generation) return;
       setActiveSessionId(result.sessionId);
-      setStreamingReply(result.reply);
+      setStreamingReply(streamingReplyRef.current || result.reply);
+      setIsRevealing(false);
       if (result.trace) {
         setTraceState({
           steps: result.trace.steps,
@@ -269,7 +328,9 @@ export default function BrainChat({
       setError(err instanceof Error ? err.message : "Failed to send message.");
       setFailedMessage(message);
       revealerRef.current?.reset();
+      streamingReplyRef.current = "";
       setStreamingReply("");
+      setIsRevealing(false);
       setOptimisticUser({
         id: "optimistic-user",
         role: "user",
@@ -283,9 +344,12 @@ export default function BrainChat({
   const handleNewChat = () => {
     sendGeneration.current += 1;
     revealerRef.current?.reset();
+    streamingReplyRef.current = "";
+    thisTurnPersistedId.current = null;
     setActiveSessionId(null);
     setOptimisticUser(null);
     setStreamingReply("");
+    setIsRevealing(false);
     setTitleOverride(null);
     setTraceState(emptyTraceState());
     setError(null);
@@ -293,6 +357,7 @@ export default function BrainChat({
     setInput("");
     setPasteCount(0);
     setSidebarOpen(false);
+    setVoiceResetKey(key => key + 1);
   };
 
   const handleDelete = (sessionId: string) => {
@@ -333,15 +398,19 @@ export default function BrainChat({
             onSelect={sessionId => {
               sendGeneration.current += 1;
               revealerRef.current?.reset();
+              streamingReplyRef.current = "";
+              thisTurnPersistedId.current = null;
               setActiveSessionId(sessionId);
               setOptimisticUser(null);
               setStreamingReply("");
+              setIsRevealing(false);
               setTitleOverride(null);
               setTraceState(emptyTraceState());
               setError(null);
               setFailedMessage(null);
               setInput("");
               setSidebarOpen(false);
+              setVoiceResetKey(key => key + 1);
             }}
             onNewChat={handleNewChat}
             onRename={(sessionId, title) => {
@@ -412,6 +481,8 @@ export default function BrainChat({
 
             {messages.map(message => {
               const isStreaming = message.id === "streaming-assistant";
+              const isThisTurnAssistant =
+                isStreaming || message.id === thisTurnPersistedId.current;
               const priorUser = precedingUserMessage(message.id);
               const retryContent = message.failed
                 ? failedMessage
@@ -419,7 +490,11 @@ export default function BrainChat({
 
               return (
                 <ChatMessage
-                  key={message.id}
+                  key={
+                    isThisTurnAssistant
+                      ? `assistant-turn-${assistantTurnId.current}`
+                      : message.id
+                  }
                   message={message}
                   onRetry={
                     !isStreaming && retryContent
@@ -451,6 +526,7 @@ export default function BrainChat({
               value={input}
               loading={chat.isPending}
               organisationName={organisationName}
+              voiceResetKey={voiceResetKey}
               onChange={value => {
                 setInput(value);
                 const count = countBankStatementLines(value);
