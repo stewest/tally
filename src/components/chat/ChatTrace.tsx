@@ -43,7 +43,7 @@ function TimelineMark({
           className="chat-trace-spin h-2.5 w-2.5 text-blue-600"
         />
       ) : (
-        <Icon icon="check" className="h-[9px] w-[9px] text-blue-600" />
+        <Icon icon="check" className="h-[8px] text-blue-600" />
       )}
     </span>
   );
@@ -77,7 +77,9 @@ function ToolStep({ step }: { step: ChatTraceTool }) {
         {open && (
           <div className="flex flex-col gap-2.5 pb-0.5">
             <JsonBlock label="Parameters" value={step.params} maxHeight={160} />
-            {result && <JsonBlock label="Result" value={result} maxHeight={200} />}
+            {result && (
+              <JsonBlock label="Result" value={result} maxHeight={200} />
+            )}
           </div>
         )}
       </div>
