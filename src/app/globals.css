@@ -58,3 +58,26 @@ button {
 .chat-trace-in svg[data-icon="check"] {
   --fa-width: 8px;
 }
+
+@keyframes chat-mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(220 38 38 / 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgb(220 38 38 / 0);
+  }
+}
+
+.chat-mic-pulse {
+  animation: chat-mic-pulse 1.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-dot-pulse,
+  .chat-trace-spin,
+  .chat-trace-in,
+  .chat-mic-pulse {
+    animation: none;
+  }
+}

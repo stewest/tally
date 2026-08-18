@@ -120,6 +120,7 @@ export default function BrainChat({
   const [traceState, setTraceState] = useState<ChatTraceState>(emptyTraceState);
   const [liveStatus, setLiveStatus] = useState("Sending to Telos Brain");
   const [stickToBottom, setStickToBottom] = useState(true);
+  const [voiceResetKey, setVoiceResetKey] = useState(0);
   const sendGeneration = useRef(0);
   const assistantTurnId = useRef(0);
   const thisTurnPersistedId = useRef<string | null>(null);
@@ -356,6 +357,7 @@ export default function BrainChat({
     setInput("");
     setPasteCount(0);
     setSidebarOpen(false);
+    setVoiceResetKey(key => key + 1);
   };
 
   const handleDelete = (sessionId: string) => {
@@ -408,6 +410,7 @@ export default function BrainChat({
               setFailedMessage(null);
               setInput("");
               setSidebarOpen(false);
+              setVoiceResetKey(key => key + 1);
             }}
             onNewChat={handleNewChat}
             onRename={(sessionId, title) => {
@@ -523,6 +526,7 @@ export default function BrainChat({
               value={input}
               loading={chat.isPending}
               organisationName={organisationName}
+              voiceResetKey={String(voiceResetKey)}
               onChange={value => {
                 setInput(value);
                 const count = countBankStatementLines(value);

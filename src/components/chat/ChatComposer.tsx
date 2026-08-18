@@ -2,12 +2,14 @@
 
 import { FormEvent, useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 interface ChatComposerProps {
   value: string;
   disabled?: boolean;
   loading?: boolean;
   organisationName?: string;
+  voiceResetKey?: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onPaste?: (text: string) => void;
@@ -18,11 +20,16 @@ export default function ChatComposer({
   disabled = false,
   loading = false,
   organisationName,
+  voiceResetKey,
   onChange,
   onSubmit,
   onPaste,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const previousResetKey = useRef(voiceResetKey);
+  const voice = useSpeechRecognition({
+    onTranscript: onChange,
+  });
 
   useEffect(() => {
     const node = textareaRef.current;
@@ -31,10 +38,28 @@ export default function ChatComposer({
     node.style.height = `${Math.min(node.scrollHeight, 160)}px`;
   }, [value]);
 
+  useEffect(() => {
+    if (disabled || loading) {
+      voice.reset();
+    }
+  }, [disabled, loading, voice.reset]);
+
+  useEffect(() => {
+    if (previousResetKey.current === voiceResetKey) return;
+    previousResetKey.current = voiceResetKey;
+    voice.reset();
+  }, [voiceResetKey, voice.reset]);
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!value.trim() || disabled || loading) return;
+    voice.reset();
     onSubmit();
+  };
+
+  const handleVoiceToggle = () => {
+    if (disabled || loading) return;
+    voice.toggle(value);
   };
 
   return (
@@ -50,7 +75,12 @@ export default function ChatComposer({
           id="brain-chat-input"
           ref={textareaRef}
           value={value}
-          onChange={event => onChange(event.target.value)}
+          onChange={event => {
+            if (voice.isListening) {
+              voice.stop();
+            }
+            onChange(event.target.value);
+          }}
           onPaste={event => {
             const text = event.clipboardData.getData("text");
             if (text) onPaste?.(text);
@@ -66,6 +96,27 @@ export default function ChatComposer({
           disabled={disabled || loading}
           className="min-h-[26px] max-h-40 flex-1 resize-none border-0 bg-transparent py-1 text-[15px] leading-[26px] text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-50"
         />
+        {voice.isSupported && (
+          <button
+            type="button"
+            aria-label={
+              voice.isListening ? "Stop voice input" : "Start voice input"
+            }
+            aria-pressed={voice.isListening}
+            disabled={disabled || loading}
+            onClick={handleVoiceToggle}
+            className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+              voice.isListening
+                ? "chat-mic-pulse bg-red-600 text-white hover:bg-red-700"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            }`}
+          >
+            <Icon
+              icon={voice.isListening ? "microphoneSlash" : "microphone"}
+              className="h-3.5 w-3.5"
+            />
+          </button>
+        )}
         <button
           type="submit"
           aria-label="Send message"
@@ -76,8 +127,18 @@ export default function ChatComposer({
         </button>
       </form>
       <div className="flex items-center justify-between gap-3 px-0.5">
-        <span className="text-xs leading-4 text-gray-500">
-          Enter to send · Shift + Enter for a new line
+        <span
+          className={`text-xs leading-4 ${
+            voice.error ? "text-red-600" : "text-gray-500"
+          }`}
+          role={voice.error ? "alert" : undefined}
+          aria-live="polite"
+        >
+          {voice.error
+            ? voice.error
+            : voice.isListening
+              ? "Listening… click the microphone to stop"
+              : "Enter to send · Shift + Enter for a new line"}
         </span>
         {organisationName && (
           <span className="inline-flex items-center gap-1.5 text-xs leading-4 text-gray-500">
