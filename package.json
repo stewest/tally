@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "prepare": "node scripts/prepare.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

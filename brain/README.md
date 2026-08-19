@@ -12,9 +12,8 @@ Precise enough for Cursor / Claude Code. Complete local steps in the root README
 ## Local (dev)
 
 ```bash
-npm install -g @telos.ready/brain
-brain start                 # writes .env.local; admin UI at http://127.0.0.1:60061
-# fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, MY_APP_* in .env.local
+# From repo root: npm install (or npm run prepare) starts Brain and writes MY_APP_API_KEY
+# Then fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and remaining MY_APP_* in .env.local
 brain deploy --env local --instance local-brain
 ```
 
