@@ -21,7 +21,7 @@ brain deploy --env local --instance local-brain
 
 Do not delete `brain.lock`. Hosted first deploy still prints a **new** execution key — do not reuse the local one.
 
-From the repo root, `npm run stack:reset` (alias: `npm run reset`) stops this stack and deletes the local SQL volume. Then `npm run prepare` to start clean.
+From the repo root, `npm run stack:reset` stops this stack and deletes the local SQL volume. Then `npm run prepare` to start clean.
 
 `brain snapshot --env local --instance local-brain` before redeploying if the live brain has learned.
 
