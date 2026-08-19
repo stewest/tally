@@ -57,6 +57,8 @@ const TOOL_RUNNING_LABELS: Record<string, string> = {
   record_transactions: "Recording transactions",
   upsertBudget: "Updating budget",
   upsert_budget: "Updating budget",
+  upsertInsight: "Saving insight",
+  upsert_insight: "Saving insight",
   updateTransaction: "Updating transaction",
   update_transaction: "Updating transaction",
   search_blueprint_entries: "Searching memory",

@@ -37,6 +37,12 @@ unitsofwork:
   - code: jobs
     name: Jobs
     scope: entity:clients
+  - code: insight
+    name: Insight
+    scope: entity:organisation
+    variables:
+      - key: insightId
+        description: Host-app insight row this job is filling.
 
 # Connectors are named integrations with external services (REST/MCP). Each file
 # under connectors/ declares URL, auth type, scope and required auth parameters.
@@ -72,6 +78,7 @@ workflows:
   - workflows/chat.md
   - workflows/chat-title.md
   - workflows/finance-review.md
+  - workflows/finance-insight.md
   - workflows/ask-question.md
   - workflows/create-frame-of-reference.md
   - workflows/review-unit-of-work.md

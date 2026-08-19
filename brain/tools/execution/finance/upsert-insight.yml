@@ -1,0 +1,41 @@
+name: upsert_insight
+version: 1
+description: >-
+  Fills a queued host-app insight card with a title and short actionable tips.
+api:
+  method: POST
+  path: /api/tools/upsertInsight
+  connector: my-app
+parameters:
+  - name: authorization
+    description: Host tool API key, injected as the Authorization bearer token.
+    header: Authorization
+    secret: MY_APP_API_KEY
+    value: "Bearer {secret}"
+  - name: brainAuthorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
+    header: X-Brain-Authorization
+    secret: BRAIN_API_KEY
+    value: "Bearer {secret}"
+  - name: organisationId
+    description: Organisation scope, injected from the current entity.
+    entity: organisationId
+  - name: insightId
+    description: Host-app insight row to fill. Prefer the unit-of-work value.
+    type: string
+    required: true
+    unitofwork: insightId
+  - name: title
+    description: Short card title for this insight category.
+    type: string
+    required: true
+  - name: tips
+    description: >-
+      JSON array of 3 to 5 short actionable tip sentences as a string, e.g.
+      ["Automate savings on payday.","Keep three months of costs in reserve."].
+    type: string
+    required: true
+response-markdown: |
+  Insight saved: {{result.title}} ({{result.status}}).
+error-markdown: |
+  Could not save insight: {{result.result}}

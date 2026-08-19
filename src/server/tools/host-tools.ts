@@ -14,6 +14,7 @@ import {
   listBudgets as listBudgetsForOrganisation,
   upsertBudget as upsertBudgetForOrganisation,
 } from "@/server/finance/budgets";
+import { completeInsight as completeInsightForOrganisation } from "@/server/finance/insights";
 import {
   createTransactions,
   listTransactions as listTransactionsForOrganisation,
@@ -66,6 +67,40 @@ function asRecord(value: unknown): Record<string, unknown> | null {
  * and the Tool Router leaves `type: string` values as strings, so a transaction
  * list usually arrives as a JSON array string rather than a real array.
  */
+function parseTipList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => {
+      if (typeof entry !== "string" || entry.trim().length === 0) {
+        throw new Error(`tips[${index}] must be a non-empty string.`);
+      }
+      return entry.trim();
+    });
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new Error("tips must be a non-empty JSON array.");
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+    } catch {
+      throw new Error(
+        "tips must be a JSON array of strings (Brain sends this parameter as a string)."
+      );
+    }
+    if (Array.isArray(parsed)) {
+      return parseTipList(parsed);
+    }
+  }
+
+  throw new Error("tips must be a non-empty JSON array of strings.");
+}
+
 function parseTransactionList(value: unknown): unknown[] {
   if (Array.isArray(value)) {
     return value;
@@ -322,6 +357,32 @@ export async function getSpendSummary(
   };
 }
 
+export async function upsertInsight(
+  parameters: Record<string, unknown>,
+  context: ToolExecutionContext
+) {
+  const insightId = asString(parameters.insightId);
+  const title = asString(parameters.title);
+  if (!insightId || !title) {
+    throw new Error("insightId and title are required.");
+  }
+
+  const tips = parseTipList(parameters.tips);
+  const insight = await completeInsightForOrganisation(
+    context.organisationId,
+    insightId,
+    { title, tips }
+  );
+
+  return {
+    id: insight.id,
+    category: insight.category,
+    status: insight.status,
+    title: insight.title,
+    tips: insight.tips,
+  };
+}
+
 /** Registry of tools exposed at `/api/tools/{toolId}`. */
 export const hostTools: Record<string, HostToolHandler> = {
   getUsers: getUsersForOrganisation,
@@ -331,4 +392,5 @@ export const hostTools: Record<string, HostToolHandler> = {
   listBudgets,
   upsertBudget,
   getSpendSummary,
+  upsertInsight,
 };

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "../ui/Icon";
 import { useState } from "react";
+import { getAppName } from "@/lib/app";
 import { getSettingsLinks } from "@/config/navigation";
 import { useUser } from "@/context/UserContext";
 import { hasRequiredRole } from "@/utils/permissions";
@@ -37,7 +38,7 @@ export default function SettingSidebar() {
             href="/dashboard"
             className="text-lg font-semibold text-gray-900 tracking-tight"
           >
-            TALLY
+            {getAppName()}
           </Link>
         )}
         <button

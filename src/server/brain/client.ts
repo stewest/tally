@@ -27,6 +27,8 @@ export interface RunWorkflowOptions {
   entityId?: string;
   /** Optional runtime unit-of-work scope (GUID). */
   unitOfWorkId?: string;
+  /** Optional run variables exposed to templates as `{{input.<key>}}`. */
+  variables?: Record<string, string>;
   /** Honoured on the async path only. */
   callbackUrl?: string;
   /**
@@ -207,6 +209,54 @@ export async function createBrainEntity(
     }
     const detail = await getBrainErrorDetail(error, "Unknown error");
     throw new Error(`Brain entity creation failed: ${detail}`);
+  }
+}
+
+/** Request body for `POST /units-of-work`. */
+export interface CreateBrainUnitOfWorkOptions {
+  entityId: string;
+  unitOfWorkTypeCode: string;
+  title: string;
+  variables?: BrainEntityVariable[];
+}
+
+/** The unit-of-work object returned by the Execution API (subset we rely on). */
+export interface BrainUnitOfWork {
+  id: string;
+  entityId?: string;
+  title?: string;
+  status?: string;
+  variables?: BrainEntityVariable[];
+}
+
+/**
+ * Creates a unit of work on the deployed brain via `POST {BRAIN_URL}/units-of-work`.
+ */
+export async function createBrainUnitOfWork(
+  options: CreateBrainUnitOfWorkOptions
+): Promise<BrainUnitOfWork> {
+  const client = createBrainAxios();
+
+  try {
+    const { data: unitOfWork } = await client.post<BrainUnitOfWork>(
+      "/units-of-work",
+      options
+    );
+
+    if (!unitOfWork?.id) {
+      throw new Error("Brain unit of work creation returned no id.");
+    }
+
+    return unitOfWork;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Brain unit of work creation returned no id."
+    ) {
+      throw error;
+    }
+    const detail = await getBrainErrorDetail(error, "Unknown error");
+    throw new Error(`Brain unit of work creation failed: ${detail}`);
   }
 }
 
@@ -471,12 +521,15 @@ export async function runWorkflowAsync(
   workflowCode: string,
   options: RunWorkflowOptions = {}
 ): Promise<AsyncRunResult> {
+  const { onDelta, onEvent, ...body } = options;
+  void onDelta;
+  void onEvent;
   const client = createBrainAxios();
 
   try {
     const { data } = await client.post<Partial<AsyncRunResult>>(
       `/workflows/${encodeURIComponent(workflowCode)}/run/async`,
-      options
+      body
     );
 
     if (!data?.runId) {

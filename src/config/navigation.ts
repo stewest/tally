@@ -36,6 +36,12 @@ export const NAV_LINKS: NavLinkConfig[] = [
     showInNav: true,
   },
   {
+    path: "/insights",
+    label: "Insights",
+    icon: "chartLine",
+    showInNav: true,
+  },
+  {
     path: "/profile",
     label: "My Profile",
     icon: "user",
