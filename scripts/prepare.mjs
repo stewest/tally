@@ -5,13 +5,15 @@
  * Runs on `npm install` (npm prepare lifecycle) and `npm run prepare`.
  * Skip with CI=1 or TEL_SKIP_PREPARE=1.
  *
- * After this finishes, fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and any
- * remaining MY_APP_* values in brain/.env.local. BRAIN_API_KEY is copied from
- * `brain start` (status box and brain.lock local.apiKey) into .env and
- * brain/.env.local. If start cannot re-print the key (instance already in the
- * Docker volume) and neither env file has a real value, prepare runs
- * `brain stop --project-id <compose> --reset` and starts again so a new key
- * can be issued.
+ * Prints README prerequisites, then starts Supabase and Brain, writes env
+ * keys, and runs `npm run db:push`. After this finishes, fill
+ * ANTHROPIC_API_KEY, VOYAGE_API_KEY, and any remaining MY_APP_* values in
+ * brain/.env.local, then `brain deploy --env local --instance local-brain`.
+ * BRAIN_API_KEY is copied from `brain start` (status box and brain.lock
+ * local.apiKey) into .env and brain/.env.local. If start cannot re-print the
+ * key (instance already in the Docker volume) and neither env file has a real
+ * value, prepare runs `brain stop --project-id <compose> --reset` and starts
+ * again so a new key can be issued.
  */
 
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -42,6 +44,7 @@ async function main() {
   }
 
   console.log("Preparing local Supabase + Brain…\n");
+  printPrerequisites();
 
   requireOnPath("supabase", "Install the Supabase CLI: brew install supabase/tap/supabase");
   requireDocker();
@@ -118,8 +121,11 @@ async function main() {
     );
   }
 
+  step("Pushing database schema (npm run db:push)");
+  run("npm", ["run", "db:push"], { cwd: root });
+
   console.log(`
-Local stack is up.
+Local stack is up. Schema is applied.
 
 Still required in brain/.env.local (this script does not set these):
   ANTHROPIC_API_KEY
@@ -127,9 +133,10 @@ Still required in brain/.env.local (this script does not set these):
   any other MY_APP_* values you need (MY_APP_API_KEY was generated;
   MY_APP_API_URL defaults to http://host.docker.internal:3000)
 
-Next:
-  npm run db:push
+Add those keys, then run the last step:
   cd brain && brain deploy --env local --instance local-brain
+
+Then:
   npm run dev          # open http://localhost:3000
 
 App .env TOOL_API_KEY and brain/.env.local MY_APP_API_KEY now match.
@@ -138,6 +145,18 @@ App .env TOOL_API_KEY and brain/.env.local MY_APP_API_KEY now match.
   if (brainApiKey) {
     console.log("App .env BRAIN_API_KEY and brain/.env.local BRAIN_API_KEY now match.\n");
   }
+}
+
+function printPrerequisites() {
+  console.log(`Prerequisites (see README.md):
+  • Node.js 25+ (see .nvmrc) — this shell: ${process.version}
+  • Docker Desktop (or Engine + Compose on Linux, or equivalent like OrbStack)
+  • Supabase CLI (brew install supabase/tap/supabase)
+  • A Clerk account (optional locally; required for stage/prod)
+  • An Anthropic API key
+  • A Voyage API key (embeddings; this brain defaults to voyage-3-lite)
+    Add Anthropic and Voyage keys in brain/.env.local before the 'brain deploy' step.
+`);
 }
 
 function getSkipReason() {
