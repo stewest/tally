@@ -69,16 +69,21 @@ async function main() {
     BRAIN_URL: keepIfSet(readEnvValue(appEnvPath, "BRAIN_URL")) ?? "http://127.0.0.1:60061",
   });
 
-  ensureCopied(brainEnvExamplePath, brainEnvPath);
+  step("Starting Brain");
+  run("brain", ["start"], { cwd: brainDir });
+
+  // Let `brain start` create `.env.local` when it is missing so it can seed
+  // the well-known TELOS_* local keys. Only fall back to the example if the
+  // file still is not there, then write the shared tool handshake.
+  if (!existsSync(brainEnvPath)) {
+    ensureCopied(brainEnvExamplePath, brainEnvPath);
+  }
   upsertEnvFile(brainEnvPath, {
     MY_APP_API_KEY: toolApiKey,
     MY_APP_API_URL:
       keepIfSet(readEnvValue(brainEnvPath, "MY_APP_API_URL")) ??
       "http://host.docker.internal:3000",
   });
-
-  step("Starting Brain");
-  run("brain", ["start"], { cwd: brainDir });
 
   console.log(`
 Local stack is up.
