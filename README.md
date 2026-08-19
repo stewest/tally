@@ -31,7 +31,7 @@ npm install
 
 `npm install` runs the `prepare` script: it prints the [Prerequisites](#prerequisites) above, then `supabase start`, writes local Supabase keys into `.env`, installs the pinned `@telos.ready/brain` CLI globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), runs `brain start`, copies the announced Brain execution key into `.env` and `brain/.env.local` as `BRAIN_API_KEY`, and runs `npm run db:push`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
 
-You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically).
+You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically). `npm run stack:reset` (alias: `npm run reset`) stops this repo's local Brain (and deletes its Docker SQL volume) and this project's Supabase. It does not stop other Compose stacks. Then `npm run prepare` to start clean.
 
 Then fill `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and any remaining `MY_APP_*` values in `brain/.env.local`. Do not commit `.env` files.
 
@@ -143,7 +143,7 @@ You should now have three processes: Next.js `:3000`, Supabase (CLI ports), Brai
 ```bash
 brain status    # API URL, health, Compose project id
 # later:
-brain stop --project-id <id-from-status>
+npm run stack:reset   # stop this repo's Brain (--reset) and Supabase
 ```
 
 ## Stage and production (Vercel + Telos Hosted)
@@ -200,7 +200,7 @@ Do not commit `.env`, `brain/.env.local`, `brain/.env.stage`, `brain/.env.prod`,
 |---|---|
 | `npm install` tries to start Docker | `prepare` runs the local stack. Use `TEL_SKIP_PREPARE=1 npm install` in CI or if you only want dependencies |
 | Chat: Brain is not configured | App `.env` missing `BRAIN_URL` or `BRAIN_API_KEY` |
-| `BRAIN_API_KEY was not announced` | Leftover local Brain Docker volume; the execution key is shown only once at create. `prepare` resets that volume when neither env file has a real key. Manual recovery: `brain stop --project-id <compose-from-brain-status> --reset`, then `npm run prepare` |
+| `BRAIN_API_KEY was not announced` | Leftover local Brain Docker volume; the execution key is shown only once at create. `prepare` resets that volume when neither env file has a real key. Manual recovery: `npm run stack:reset`, then `npm run prepare` |
 | Tools never hit Next.js | `MY_APP_API_URL` used `localhost` instead of `http://host.docker.internal:3000` |
 | Tool webhook 401 | `TOOL_API_KEY` ≠ `MY_APP_API_KEY`, or Brain keys differ |
 | Deploy fails on embeddings | Blank `VOYAGE_API_KEY` in the Vercel env (or brain env file) |
