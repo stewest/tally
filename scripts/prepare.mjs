@@ -151,7 +151,7 @@ function printPrerequisites() {
   console.log(`Prerequisites (see README.md):
   • Node.js 25+ (see .nvmrc) — this shell: ${process.version}
   • Docker Desktop (or Engine + Compose on Linux, or equivalent like OrbStack)
-  • Supabase CLI (brew install supabase/tap/supabase)
+  • Supabase CLI (brew install supabase/tap/supabase or see https://supabase.com/docs/guides/local-development/cli/getting-started)
   • A Clerk account (optional locally; required for stage/prod)
   • An Anthropic API key
   • A Voyage API key (embeddings; this brain defaults to voyage-3-lite)
