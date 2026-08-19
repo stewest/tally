@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { SessionAuthProvider } from "@/context/SessionAuthProvider";
 import { UserProvider } from "@/context/UserContext";
 import { BreadcrumbProvider } from "@/context/BreadcrumbContext";
 import { ToastProvider } from "./ui/Toast";
@@ -22,11 +23,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <UserProvider>
-        <BreadcrumbProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </BreadcrumbProvider>
-      </UserProvider>
+      <SessionAuthProvider>
+        <UserProvider>
+          <BreadcrumbProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </BreadcrumbProvider>
+        </UserProvider>
+      </SessionAuthProvider>
     </QueryClientProvider>
   );
 }

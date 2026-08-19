@@ -12,6 +12,8 @@ import {
 } from "../../db/schema";
 import { getMembership, getUserMemberships } from "./membership";
 import { getOrganisation } from "./organisation";
+import { isLocalAuthBypassEnabled } from "@/utils/auth-mode";
+import { ensureLocalDevProfile, LOCAL_DEV_CLERK_ID } from "./local-auth";
 
 export type CurrentUser = {
   profile: Profile;
@@ -21,6 +23,11 @@ export type CurrentUser = {
 };
 
 export const getClerkUserId = async (): Promise<string> => {
+  if (isLocalAuthBypassEnabled()) {
+    await ensureLocalDevProfile();
+    return LOCAL_DEV_CLERK_ID;
+  }
+
   const { userId } = await auth();
   if (!userId) throw new Error("User not authenticated");
   return userId;
@@ -39,6 +46,10 @@ export const getProfileByClerkId = async (
 };
 
 const getOrCreateProfile = async (clerkId: string): Promise<Profile | null> => {
+  if (isLocalAuthBypassEnabled()) {
+    return ensureLocalDevProfile();
+  }
+
   const existing = await getProfileByClerkId(clerkId);
   if (existing) return existing;
 
@@ -80,14 +91,7 @@ const getOrCreateProfile = async (clerkId: string): Promise<Profile | null> => {
   return newProfile ?? null;
 };
 
-export const getCurrentUser = async (): Promise<CurrentUser | null> => {
-  const clerkId = await getClerkUserId();
-  const profile = await getOrCreateProfile(clerkId);
-
-  if (!profile) {
-    return null;
-  }
-
+const buildCurrentUser = async (profile: Profile): Promise<CurrentUser> => {
   let role: Role | null = null;
   let organisation: Organisation | null = null;
   let memberships: Membership[] = [];
@@ -113,4 +117,20 @@ export const getCurrentUser = async (): Promise<CurrentUser | null> => {
     role,
     memberships,
   };
+};
+
+export const getCurrentUser = async (): Promise<CurrentUser | null> => {
+  if (isLocalAuthBypassEnabled()) {
+    const profile = await ensureLocalDevProfile();
+    return buildCurrentUser(profile);
+  }
+
+  const clerkId = await getClerkUserId();
+  const profile = await getOrCreateProfile(clerkId);
+
+  if (!profile) {
+    return null;
+  }
+
+  return buildCurrentUser(profile);
 };

@@ -4,7 +4,7 @@ import React, { createContext, useContext } from "react";
 import { CurrentUser } from "@/server/authentication";
 import { Membership, Role } from "../../db/schema";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth } from "@/context/SessionAuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface UserContextProps {
@@ -30,10 +30,12 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }: UserProviderProps) => {
-  const { isLoaded: isClerkLoaded, isSignedIn } = useAuth();
+  const { isLoaded: isSessionLoaded, isSignedIn } = useSessionAuth();
   const { data: currentUser, isFetching, isPending, error } = useCurrentUser();
   const queryClient = useQueryClient();
-  const isLoading = !isClerkLoaded || (!!isSignedIn && (isFetching || (isPending && !error)));
+  const isLoading =
+    !isSessionLoaded ||
+    (!!isSignedIn && (isFetching || (isPending && !error)));
 
   const refreshUser = async () => {
     await queryClient.invalidateQueries({ queryKey: ["currentUser"] });

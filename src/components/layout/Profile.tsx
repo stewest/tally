@@ -2,15 +2,36 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { useClerk, UserAvatar } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { useUser } from "@/context/UserContext";
 import { Icon } from "@/components/ui/Icon";
+import { ProfilePicture } from "@/components/ui/ProfilePicture";
+import { isLocalAuthBypassEnabled } from "@/utils/auth-mode";
+
+function ClerkSignOutButton({ onSignedOut }: { onSignedOut: () => void }) {
+  const { signOut } = useClerk();
+
+  const handleSignOut = async () => {
+    onSignedOut();
+    await signOut({ redirectUrl: "/sign-in" });
+  };
+
+  return (
+    <button
+      onClick={handleSignOut}
+      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+    >
+      <Icon icon="signOut" className="w-4 h-4 text-gray-400" />
+      Sign out
+    </button>
+  );
+}
 
 export default function Profile() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { currentUser, memberships, isAdmin } = useUser();
-  const { signOut } = useClerk();
+  const localBypass = isLocalAuthBypassEnabled();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -31,25 +52,13 @@ export default function Profile() {
     currentUser.profile.email ||
     "User";
 
-  const handleSignOut = async () => {
-    setOpen(false);
-    await signOut({ redirectUrl: "/sign-in" });
-  };
-
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
         className="w-8 h-8 rounded-full overflow-hidden hover:opacity-90 transition-opacity"
       >
-        <UserAvatar
-          rounded
-          appearance={{
-            elements: {
-              avatarBox: "w-full h-full",
-            },
-          }}
-        />
+        <ProfilePicture size="small" />
       </button>
 
       {open && (
@@ -94,13 +103,11 @@ export default function Profile() {
 
           <div className="border-t border-gray-100 mx-3 my-1" />
 
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Icon icon="signOut" className="w-4 h-4 text-gray-400" />
-            Sign out
-          </button>
+          {localBypass ? (
+            <p className="px-4 py-2 text-xs text-gray-400">Local development</p>
+          ) : (
+            <ClerkSignOutButton onSignedOut={() => setOpen(false)} />
+          )}
         </div>
       )}
     </div>

@@ -5,11 +5,30 @@ import { UserProfile, useUser as useClerkUser } from "@clerk/nextjs";
 import { useUpdateProfile } from "@/hooks/useAuth";
 import { useUser } from "@/context/UserContext";
 import { usePageLayout } from "@/hooks/usePageLayout";
+import { isLocalAuthBypassEnabled } from "@/utils/auth-mode";
 
-export default function ProfilePage() {
-  usePageLayout(
-    useMemo(() => ({ breadcrumbs: [{ label: "My Profile" }] }), [])
+function LocalProfileCard() {
+  const { currentUser } = useUser();
+  const displayName =
+    [currentUser?.profile.firstName, currentUser?.profile.lastName]
+      .filter(Boolean)
+      .join(" ") || "Local Developer";
+
+  return (
+    <div className="w-full max-w-xl border border-gray-200 rounded-xl p-6 bg-white">
+      <h2 className="text-lg font-medium text-gray-900">{displayName}</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        {currentUser?.profile.email ?? "local@localhost"}
+      </p>
+      <p className="mt-4 text-sm text-gray-500">
+        Signed in with the local development bypass. Add real Clerk keys to
+        manage account settings here.
+      </p>
+    </div>
   );
+}
+
+function ClerkProfilePage() {
   const { user: clerkUser } = useClerkUser();
   const { currentUser } = useUser();
   const { mutate: syncProfile } = useUpdateProfile();
@@ -74,4 +93,16 @@ export default function ProfilePage() {
       />
     </div>
   );
+}
+
+export default function ProfilePage() {
+  usePageLayout(
+    useMemo(() => ({ breadcrumbs: [{ label: "My Profile" }] }), [])
+  );
+
+  if (isLocalAuthBypassEnabled()) {
+    return <LocalProfileCard />;
+  }
+
+  return <ClerkProfilePage />;
 }

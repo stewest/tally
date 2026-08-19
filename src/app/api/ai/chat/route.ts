@@ -71,7 +71,7 @@ function encodeSse(event: ChatStreamEvent): Uint8Array {
  *
  * Streams Brain text deltas as SSE. History is loaded from the persisted
  * session. A missing `sessionId` creates a new session. Auth: Clerk session
- * + organisation.
+ * (or local auth bypass) + organisation.
  */
 export async function POST(request: NextRequest) {
   const { user, error } = await requireRole(Role.Member);

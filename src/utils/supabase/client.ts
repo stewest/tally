@@ -1,11 +1,11 @@
 "use client";
 
-import { useSession } from "@clerk/nextjs";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { useMemo } from "react";
+import { useSessionAuth } from "@/context/SessionAuthContext";
 
 export function useSupabaseClient() {
-  const { session } = useSession();
+  const { getAccessToken } = useSessionAuth();
 
   return useMemo(() => {
     return createSupabaseClient(
@@ -13,9 +13,9 @@ export function useSupabaseClient() {
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
       {
         async accessToken() {
-          return session?.getToken() ?? null;
+          return getAccessToken();
         },
       }
     );
-  }, [session]);
+  }, [getAccessToken]);
 }

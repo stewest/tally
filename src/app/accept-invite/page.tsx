@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth } from "@/context/SessionAuthContext";
 import { useUser } from "@/context/UserContext";
 import { PageSpinner } from "@/components/Spinner";
 import { useAcceptInvite, useGetInviteByToken } from "@/hooks/useUsers";
@@ -17,7 +17,7 @@ interface AcceptedInviteInfo {
 const AcceptInviteContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
+  const { isSignedIn, isLoaded: isSessionLoaded } = useSessionAuth();
   const { currentUser, isLoading: isLoadingUser, refreshUser } = useUser();
   const [acceptedInvite, setAcceptedInvite] =
     useState<AcceptedInviteInfo | null>(null);
@@ -40,7 +40,7 @@ const AcceptInviteContent = () => {
   };
 
   useEffect(() => {
-    if (!isClerkLoaded) return;
+    if (!isSessionLoaded) return;
 
     const justSignedIn = isSignedIn && !prevSignedIn.current;
     const signedInButNoUser = isSignedIn && !currentUser && !isLoadingUser;
@@ -53,7 +53,7 @@ const AcceptInviteContent = () => {
     }
 
     prevSignedIn.current = isSignedIn;
-  }, [isClerkLoaded, isSignedIn, currentUser, isLoadingUser, token, queryClient, refetchInvite]);
+  }, [isSessionLoaded, isSignedIn, currentUser, isLoadingUser, token, queryClient, refetchInvite]);
 
   const handleAcceptInvite = async () => {
     if (!token) return;
@@ -106,7 +106,7 @@ const AcceptInviteContent = () => {
     );
   }
 
-  const isAuthSettling = !isClerkLoaded || (isSignedIn && !currentUser && isLoadingUser);
+  const isAuthSettling = !isSessionLoaded || (isSignedIn && !currentUser && isLoadingUser);
 
   if (isLoadingInvite || isAuthSettling) {
     return (

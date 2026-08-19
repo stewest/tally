@@ -1,6 +1,6 @@
 # Starter Brain
 
-Schema for the host app in the parent folder. **First-time install:** follow the [root README](../README.md) — clone the repo, run Clerk + local Supabase, then `brain start` / `brain deploy --env local`. Do not run `brain init`; this folder is already the schema.
+Schema for the host app in the parent folder. **First-time install:** follow the [root README](../README.md) — clone the repo, run local Supabase (Clerk is optional locally), then `brain start` / `brain deploy --env local`. Do not run `brain init`; this folder is already the schema.
 
 | Environment | Brain | Command |
 |---|---|---|
