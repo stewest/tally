@@ -1,6 +1,6 @@
 # TALLY: Vercel Brain Supabase Template Demo
 
-A Demo personal-finance app/ (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/`. After sign-in you get **Dashboard**, **Chat**, **Transactions**, and **Budgets**. Clone this repo, run everything locally, then deploy the same app and brain schema to stage/prod.
+A Demo personal-finance app/ (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/`. After sign-in you get **Dashboard**, **Chat**, **Transactions**, **Budgets**, and **Insights**. Clone this repo, run everything locally, then deploy the same app and brain schema to stage/prod.
 
 | Environment | App | Brain |
 |---|---|---|
@@ -26,10 +26,15 @@ After setup you can open **Chat** and paste a bank statement (`samples/bank-stat
 git clone <repository-url>
 cd <your-repository-folder>
 npm install
-cp .env.example .env
 ```
 
-Do not commit `.env` files. Optional app vars (already defaulted in code):
+`npm install` runs the `prepare` script: `supabase start`, writes local Supabase keys into `.env`, installs `@telos.ready/brain@latest` globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), and runs `brain start`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
+
+You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically).
+
+Then fill `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and any remaining `MY_APP_*` values in `brain/.env.local`. Do not commit `.env` files.
+
+Optional app vars (already defaulted in code):
 
 | Variable | Default | Used for |
 |---|---|---|
@@ -63,21 +68,15 @@ For hosted Supabase (stage/prod), also add Clerk as a third-party provider in th
 ## 3. Local database
 
 1. Open Docker Desktop.
-2. Start Supabase (first run may take several minutes):
-
-```bash
-supabase start
-```
-
-3. Copy these values from the CLI output into `.env`:
+2. `npm install` / `npm run prepare` already ran `supabase start` and wrote these into `.env`:
    - `NEXT_PUBLIC_SUPABASE_URL` — API URL
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Publishable key (`sb_publishable_…`)
    - `SUPABASE_SECRET_KEY` — Secret key (`sb_secret_…`, server only)
    - `POSTGRES_URL` — database URL
 
-   Use publishable/secret keys, not legacy `anon` / `service_role` JWTs.
+   Use publishable/secret keys, not legacy `anon` / `service_role` JWTs. To refresh them later, run `npm run prepare` again.
 
-4. Apply the schema:
+3. Apply the schema:
 
 ```bash
 npm run db:push
@@ -87,23 +86,17 @@ Local development uses `db:push`. On hosted Postgres, apply migrations with `npm
 
 ## 4. Local Brain (dev)
 
-The schema already lives in `brain/`. You do not run `brain init`.
-
-```bash
-npm install -g @telos.ready/brain
-cd brain
-brain start
-```
+The schema already lives in `brain/`. You do not run `brain init`. `npm install` / `npm run prepare` already installed `@telos.ready/brain@latest`, generated `MY_APP_API_KEY` (same value as app `TOOL_API_KEY`), and ran `brain start`.
 
 `brain start` boots SQL Server + Brain in Docker, writes `brain/.env.local` if missing, and opens the admin UI at [http://127.0.0.1:60061](http://127.0.0.1:60061) (no sign-in).
 
-Fill in `brain/.env.local`:
+Fill in the keys `prepare` cannot know, in `brain/.env.local`:
 
 ```bash
 ANTHROPIC_API_KEY=your-anthropic-api-key
 VOYAGE_API_KEY=your-voyage-api-key
 MY_APP_API_URL=http://host.docker.internal:3000
-MY_APP_API_KEY=your-shared-tool-api-key
+# MY_APP_API_KEY is already set by prepare
 ```
 
 Leave the `TELOS_*` values that `brain start` wrote — they are the well-known local org key and `http://127.0.0.1:60061`. `TELOS_*` is CLI config only; it is never uploaded to the brain.
@@ -137,7 +130,7 @@ BRAIN_API_KEY=your-brain-execution-api-key
 TOOL_API_KEY=your-shared-tool-api-key
 ```
 
-`TOOL_API_KEY` (app) and `MY_APP_API_KEY` (brain) must be the same string. `BRAIN_API_KEY` must match on both sides.
+`prepare` already sets `BRAIN_URL` and a matching `TOOL_API_KEY` / `MY_APP_API_KEY`. You still add `BRAIN_API_KEY` from the first deploy below. `BRAIN_API_KEY` must match on both sides.
 
 | Direction | Auth | Purpose |
 |---|---|---|
@@ -225,6 +218,7 @@ Do not commit `.env`, `brain/.env.local`, `brain/.env.stage`, `brain/.env.prod`,
 
 | Symptom | Likely cause |
 |---|---|
+| `npm install` tries to start Docker | `prepare` runs the local stack. Use `TEL_SKIP_PREPARE=1 npm install` in CI or if you only want dependencies |
 | Chat: Brain is not configured | App `.env` missing `BRAIN_URL` or `BRAIN_API_KEY` |
 | Tools never hit Next.js | `MY_APP_API_URL` used `localhost` instead of `http://host.docker.internal:3000` |
 | Tool webhook 401 | `TOOL_API_KEY` ≠ `MY_APP_API_KEY`, or Brain keys differ |
