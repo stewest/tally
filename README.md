@@ -1,6 +1,16 @@
 # TALLY: Vercel Brain Supabase Template Demo
 
-A Demo personal-finance app/ (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/`. After sign-in you get **Dashboard**, **Chat**, **Transactions**, **Budgets**, and **Insights**. Clone this repo, run everything locally, then deploy the same app and brain schema to stage/prod.
+Demo app (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/` with the flavour of a personal-finance app. After sign-in you get **Dashboard**, **Chat**, **Transactions**, **Budgets**, and **Insights**. Clone this repo, run everything locally, then deploy the same app and brain schema to stage/prod.
+
+## Prerequisites
+
+- Node.js 25+ (see `.nvmrc`)
+- Docker Desktop (or Engine + Compose on Linux, or equivalent like OrbStack).
+- [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) (`brew install supabase/tap/supabase`)
+- A [Clerk](https://clerk.com) account (optional locally; required for stage/prod)
+- An [Anthropic](https://console.anthropic.com) API key
+- A [Voyage](https://dash.voyageai.com) API key (embeddings; this brain defaults to `voyage-3-lite`)
+  - Add Anthropic and VoyageAI keys before running the 'brain deploy' step.
 
 | Environment | App | Brain |
 |---|---|---|
@@ -11,15 +21,6 @@ Local Brain is self-hosted Docker and does not use Clerk. The host app can run l
 
 After setup you can open **Chat** and paste a bank statement (`samples/bank-statement.txt`).
 
-## Prerequisites
-
-- Node.js 25+ (see `.nvmrc`)
-- Docker Desktop (or Engine + Compose on Linux)
-- [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) (`brew install supabase/tap/supabase`)
-- A [Clerk](https://clerk.com) account (optional locally; required for stage/prod)
-- An [Anthropic](https://console.anthropic.com) API key
-- A [Voyage](https://dash.voyageai.com) API key (embeddings; this brain defaults to `voyage-3-lite`)
-
 ## 1. Clone and install
 
 ```bash
@@ -28,7 +29,7 @@ cd <your-repository-folder>
 npm install
 ```
 
-`npm install` runs the `prepare` script: `supabase start`, writes local Supabase keys into `.env`, installs `@telos.ready/brain@latest` globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), runs `brain start`, and copies the announced Brain execution key into `.env` and `brain/.env.local` as `BRAIN_API_KEY`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
+`npm install` runs the `prepare` script: it prints the [Prerequisites](#prerequisites) above, then `supabase start`, writes local Supabase keys into `.env`, installs `@telos.ready/brain@latest` globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), runs `brain start`, copies the announced Brain execution key into `.env` and `brain/.env.local` as `BRAIN_API_KEY`, and runs `npm run db:push`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
 
 You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically).
 
@@ -76,13 +77,7 @@ For hosted Supabase (stage/prod), also add Clerk as a third-party provider in th
 
    Use publishable/secret keys, not legacy `anon` / `service_role` JWTs. To refresh them later, run `npm run prepare` again.
 
-3. Apply the schema:
-
-```bash
-npm run db:push
-```
-
-Local development uses `db:push`. On hosted Postgres, apply migrations with `npm run db:migrate`.
+3. `prepare` already applied the schema with `npm run db:push`. Re-run that command after you change `db/schema.ts`. Local development uses `db:push`. On hosted Postgres, apply migrations with `npm run db:migrate`.
 
 ## 4. Local Brain (dev)
 
@@ -96,7 +91,7 @@ Fill in the keys `prepare` cannot know, in `brain/.env.local`:
 ANTHROPIC_API_KEY=your-anthropic-api-key
 VOYAGE_API_KEY=your-voyage-api-key
 MY_APP_API_URL=http://host.docker.internal:3000
-# MY_APP_API_KEY and BRAIN_API_KEY are already set by prepare
+# MY_APP_API_KEY and BRAIN_API_KEY are already set by npm prepare script.
 ```
 
 Leave the `TELOS_*` values that `brain start` wrote — they are the well-known local org key and `http://127.0.0.1:60061`. `TELOS_*` is CLI config only; it is never uploaded to the brain.

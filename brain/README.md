@@ -12,9 +12,10 @@ Precise enough for Cursor / Claude Code. Complete local steps in the root README
 ## Local (dev)
 
 ```bash
-# From repo root: npm install (or npm run prepare) starts Brain and writes
-# MY_APP_API_KEY plus BRAIN_API_KEY (from brain start) into .env.local and the app .env
-# Then fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and remaining MY_APP_* in .env.local
+# From repo root: npm install (or npm run prepare) starts Brain, writes
+# MY_APP_API_KEY plus BRAIN_API_KEY (from brain start) into .env.local and the app .env,
+# and runs npm run db:push. Then fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and remaining
+# MY_APP_* in .env.local
 brain deploy --env local --instance local-brain
 ```
 

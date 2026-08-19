@@ -5,19 +5,21 @@
  * Runs on `npm install` (npm prepare lifecycle) and `npm run prepare`.
  * Skip with CI=1 or TEL_SKIP_PREPARE=1.
  *
- * After this finishes, fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and any
- * remaining MY_APP_* values in brain/.env.local. BRAIN_API_KEY is copied from
- * `brain start` (status box and brain.lock local.apiKey) into .env and
- * brain/.env.local. If start cannot re-print the key (instance already in the
- * Docker volume) and neither env file has a real value, prepare runs
- * `brain stop --project-id <compose> --reset` and starts again so a new key
- * can be issued.
+ * Prints README prerequisites, then starts Supabase and Brain, writes env
+ * keys, and runs `npm run db:push`. After this finishes, fill
+ * ANTHROPIC_API_KEY, VOYAGE_API_KEY, and any remaining MY_APP_* values in
+ * brain/.env.local, then `brain deploy --env local --instance local-brain`.
+ * BRAIN_API_KEY is copied from `brain start` (status box and brain.lock
+ * local.apiKey) into .env and brain/.env.local. If start cannot re-print the
+ * key (instance already in the Docker volume) and neither env file has a real
+ * value, prepare runs `brain stop --project-id <compose> --reset` and starts
+ * again so a new key can be issued.
  */
 
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -29,19 +31,46 @@ const brainEnvExamplePath = join(brainDir, ".env.example");
 
 const PLACEHOLDER = /^(your-|changeme|todo$|placeholder)/i;
 
+const colorEnabled = (() => {
+  if (process.env.FORCE_COLOR === "0") {
+    return false;
+  }
+  if (process.env.FORCE_COLOR) {
+    return true;
+  }
+  if (process.env.NO_COLOR || process.env.TERM === "dumb") {
+    return false;
+  }
+  return Boolean(process.stdout.isTTY);
+})();
+
+const s = {
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  magenta: "\x1b[35m",
+  brightRed: "\x1b[91m",
+  brightGreen: "\x1b[92m",
+  brightYellow: "\x1b[93m",
+  brightMagenta: "\x1b[95m",
+  brightCyan: "\x1b[96m",
+};
+
+let stepIndex = 0;
+
 main().catch((error) => {
-  console.error(`\nprepare failed: ${error instanceof Error ? error.message : error}`);
+  fail(`prepare failed: ${error instanceof Error ? error.message : error}`);
   process.exit(1);
 });
 
 async function main() {
   const skipReason = getSkipReason();
   if (skipReason) {
-    console.log(`Skipping local stack prepare (${skipReason}).`);
+    warn(`Skipping local stack prepare (${skipReason}).`);
     return;
   }
 
-  console.log("Preparing local Supabase + Brain…\n");
+  printBanner();
+  printPrerequisites();
 
   requireOnPath("supabase", "Install the Supabase CLI: brew install supabase/tap/supabase");
   requireDocker();
@@ -57,7 +86,7 @@ async function main() {
     step("Installing npm dependencies");
     run("npm", ["install", "--ignore-scripts"], { cwd: root });
   } else {
-    console.log("• npm install already in progress — skipping nested install");
+    note("npm install already in progress — skipping nested install");
   }
 
   step("Installing latest @telos.ready/brain globally");
@@ -111,33 +140,64 @@ async function main() {
   }
 
   if (brainApiKey) {
-    console.log("  BRAIN_API_KEY is set in .env and brain/.env.local");
+    ok("BRAIN_API_KEY is set in .env and brain/.env.local");
   } else {
-    console.log(
-      "  BRAIN_API_KEY was not announced. The execution key is shown only once at create. Reset the local volume and start again: `brain stop --project-id <compose-from-brain-status> --reset`, then `npm run prepare`.",
+    warn(
+      "BRAIN_API_KEY was not announced. The execution key is shown only once at create. Reset the local volume and start again: `brain stop --project-id <compose-from-brain-status> --reset`, then `npm run prepare`.",
     );
   }
 
-  console.log(`
-Local stack is up.
+  step("Pushing database schema");
+  run("npm", ["run", "db:push"], { cwd: root });
 
-Still required in brain/.env.local (this script does not set these):
-  ANTHROPIC_API_KEY
-  VOYAGE_API_KEY
-  any other MY_APP_* values you need (MY_APP_API_KEY was generated;
-  MY_APP_API_URL defaults to http://host.docker.internal:3000)
+  printDone(brainApiKey);
+}
 
-Next:
-  npm run db:push
-  cd brain && brain deploy --env local --instance local-brain
-  npm run dev          # open http://localhost:3000
+function printBanner() {
+  printBox(`${s.bold}${s.brightMagenta}`, [
+    { text: "TELOS", style: `${s.bold}${s.brightMagenta}` },
+    { text: "Preparing local Supabase + Brain", style: `${s.bold}${s.brightCyan}` },
+  ]);
+}
 
-App .env TOOL_API_KEY and brain/.env.local MY_APP_API_KEY now match.
-`);
+function printPrerequisites() {
+  heading("Prerequisites", "see README.md");
+  bullet("Node.js 25+ (see .nvmrc)", `this shell: ${process.version}`);
+  bullet("Docker Desktop", "or Engine + Compose on Linux, or equivalent like OrbStack");
+  bullet("Supabase CLI", "brew install supabase/tap/supabase");
+  hint("https://supabase.com/docs/guides/local-development/cli/getting-started");
+  bullet("A Clerk account", "optional locally; required for stage/prod");
+  bullet("An Anthropic API key");
+  bullet("A Voyage API key", "embeddings; this brain defaults to voyage-3-lite");
+  hint("Add Anthropic and Voyage keys in brain/.env.local before the 'brain deploy' step.");
+  console.log("");
+}
 
+function printDone(brainApiKey) {
+  printBox(`${s.bold}${s.brightGreen}`, [
+    { text: "Local stack is up. Schema is applied.", style: `${s.bold}${s.brightGreen}` },
+  ]);
+
+  heading("Still required in brain/.env.local");
+  note("This script does not set these:");
+  bullet(paint(`${s.bold}${s.brightMagenta}`, "ANTHROPIC_API_KEY"));
+  bullet(paint(`${s.bold}${s.brightMagenta}`, "VOYAGE_API_KEY"));
+  bullet("any other MY_APP_* values you need");
+  hint("MY_APP_API_KEY was generated; MY_APP_API_URL defaults to http://host.docker.internal:3000");
+
+  heading("Last step");
+  note("Add those keys, then run:");
+  printCommand("brain", ["deploy", "--env", "local", "--instance", "local-brain"], { cwd: brainDir });
+  note("Then start the app:");
+  printCommand("npm", ["run", "dev"]);
+  hint("open http://localhost:3000");
+
+  console.log("");
+  ok("App .env TOOL_API_KEY and brain/.env.local MY_APP_API_KEY now match.");
   if (brainApiKey) {
-    console.log("App .env BRAIN_API_KEY and brain/.env.local BRAIN_API_KEY now match.\n");
+    ok("App .env BRAIN_API_KEY and brain/.env.local BRAIN_API_KEY now match.");
   }
+  console.log("");
 }
 
 function getSkipReason() {
@@ -183,7 +243,7 @@ function readSupabaseEnv() {
 function resolveToolApiKey() {
   const existing = keepIfSet(readEnvValue(appEnvPath, "TOOL_API_KEY"));
   if (existing) {
-    console.log("  Reusing existing TOOL_API_KEY");
+    note("Reusing existing TOOL_API_KEY");
     return existing;
   }
 
@@ -212,16 +272,16 @@ function resolveBrainApiKeys(startOutput) {
 async function resetLocalBrainVolumeAndRestart() {
   const composeProject = readComposeProjectId();
   if (!composeProject) {
-    console.log("  Could not determine Compose project id; skipping Brain volume reset.");
+    warn("Could not determine Compose project id; skipping Brain volume reset.");
     return "";
   }
 
-  console.log("  No BRAIN_API_KEY found — resetting local Brain volume and restarting...");
+  warn("No BRAIN_API_KEY found — resetting local Brain volume and restarting...");
   try {
     run("brain", ["stop", "--project-id", composeProject, "--reset"], { cwd: brainDir });
   } catch (error) {
-    console.log(
-      `  brain stop --reset failed (${error instanceof Error ? error.message : error}). Continuing without a new key.`,
+    warn(
+      `brain stop --reset failed (${error instanceof Error ? error.message : error}). Continuing without a new key.`,
     );
     return "";
   }
@@ -401,6 +461,7 @@ function requireDocker() {
 }
 
 function run(command, args, options = {}) {
+  printCommand(command, args, options);
   const result = spawnSync(command, args, {
     stdio: "inherit",
     cwd: options.cwd ?? root,
@@ -416,6 +477,7 @@ function run(command, args, options = {}) {
 }
 
 function runAndCapture(command, args, options = {}) {
+  printCommand(command, args, options);
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd ?? root,
@@ -444,8 +506,72 @@ function runAndCapture(command, args, options = {}) {
   });
 }
 
+function printBox(borderStyle, lines) {
+  const width = 56;
+  const top = `┏${"━".repeat(width)}┓`;
+  const bottom = `┗${"━".repeat(width)}┛`;
+  const pad = (text) => `┃  ${text}${" ".repeat(Math.max(0, width - 2 - text.length))}┃`;
+
+  console.log("");
+  console.log(paint(borderStyle, top));
+  for (const line of lines) {
+    console.log(paint(line.style, pad(line.text)));
+  }
+  console.log(paint(borderStyle, bottom));
+}
+
+function paint(style, text) {
+  if (!colorEnabled) {
+    return String(text);
+  }
+  return `${style}${text}\x1b[0m`;
+}
+
+function heading(text, hintText) {
+  const suffix = hintText ? ` ${paint(s.dim, `(${hintText})`)}` : "";
+  console.log("");
+  console.log(paint(`${s.bold}${s.brightCyan}`, `▸ ${text}`) + suffix);
+}
+
 function step(label) {
-  console.log(`\n• ${label}`);
+  stepIndex += 1;
+  const n = paint(`${s.bold}${s.brightMagenta}`, String(stepIndex).padStart(2, "0"));
+  console.log("");
+  console.log(`${n}  ${paint(`${s.bold}${s.brightCyan}`, label)}`);
+}
+
+function printCommand(command, args = [], options = {}) {
+  const rendered = `$ ${[command, ...args].join(" ")}`;
+  const cwd = options.cwd ?? root;
+  const rel = relative(root, cwd);
+  const location = rel && rel !== "." ? paint(s.dim, `  (in ${rel}/)`) : "";
+  console.log(`  ${paint(`${s.bold}${s.brightYellow}`, rendered)}${location}`);
+}
+
+function bullet(text, detail) {
+  const mark = paint(`${s.bold}${s.magenta}`, "•");
+  const extra = detail ? paint(s.dim, ` — ${detail}`) : "";
+  console.log(`  ${mark} ${text}${extra}`);
+}
+
+function hint(text) {
+  console.log(`    ${paint(s.dim, text)}`);
+}
+
+function note(text) {
+  console.log(`  ${paint(s.dim, text)}`);
+}
+
+function ok(text) {
+  console.log(`  ${paint(`${s.bold}${s.brightGreen}`, "✓")} ${text}`);
+}
+
+function warn(text) {
+  console.log(`  ${paint(`${s.bold}${s.brightYellow}`, "!")} ${text}`);
+}
+
+function fail(text) {
+  console.error(`\n  ${paint(`${s.bold}${s.brightRed}`, "✖")} ${text}`);
 }
 
 function truthy(value) {
