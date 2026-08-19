@@ -12,6 +12,8 @@ import {
   ChatSession,
   ChatMessage,
   BudgetPeriod,
+  Insight,
+  InsightCategory,
 } from "../../db/schema";
 import type { BudgetProgress, CategorySpendRow } from "@/lib/finance";
 import { CurrentUser } from "@/server/authentication";
@@ -411,6 +413,30 @@ declare global {
       byCategory: CategorySpendRow[];
       budgets: BudgetProgress[];
     };
+    error?: string;
+  }
+
+  interface ListInsightsResponse {
+    success: boolean;
+    data?: {
+      insights: Insight[];
+      hasTransactions: boolean;
+    };
+    error?: string;
+  }
+
+  interface QueueInsightsRequest {
+    categories: InsightCategory[];
+  }
+
+  interface QueueInsightsResponse {
+    success: boolean;
+    data?: Insight[];
+    error?: string;
+  }
+
+  interface DismissInsightResponse {
+    success: boolean;
     error?: string;
   }
 

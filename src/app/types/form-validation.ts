@@ -1,4 +1,4 @@
-import { InferType, object, string } from "yup";
+import { boolean, InferType, object, string } from "yup";
 import { BUDGET_PERIODS } from "@/lib/finance";
 
 export const ProfileSchema = object({
@@ -46,3 +46,24 @@ export const BudgetSchema = object({
 });
 
 export type BudgetFormValues = InferType<typeof BudgetSchema>;
+
+export const InsightQueueSchema = object({
+  budgetingSpending: boolean().default(false),
+  savingEmergency: boolean().default(false),
+  debtCredit: boolean().default(false),
+  investingGrowth: boolean().default(false),
+}).test("at-least-one-category", "Select at least one category", function (value) {
+  const selected =
+    value.budgetingSpending ||
+    value.savingEmergency ||
+    value.debtCredit ||
+    value.investingGrowth;
+  return selected
+    ? true
+    : this.createError({
+        path: "budgetingSpending",
+        message: "Select at least one category",
+      });
+});
+
+export type InsightQueueFormValues = InferType<typeof InsightQueueSchema>;

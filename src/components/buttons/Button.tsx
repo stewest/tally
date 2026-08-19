@@ -1,7 +1,7 @@
 interface ButtonProps {
   children: React.ReactNode;
   type?: "button" | "submit" | "reset";
-  variant?: "primary" | "secondary" | "outline";
+  variant?: "primary" | "secondary" | "outline" | "dangerSoft";
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
   loading?: boolean;
@@ -27,6 +27,8 @@ export default function Button({
     secondary: "bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500",
     outline:
       "border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-blue-500",
+    dangerSoft:
+      "bg-red-50 text-red-700 hover:bg-red-100 focus:ring-red-500",
   };
 
   const sizeClasses = {

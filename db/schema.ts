@@ -1,5 +1,7 @@
 import {
   date,
+  index,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -33,10 +35,25 @@ const transactionSourceEnum = pgEnum("transaction_sources", [
 
 const chatMessageRoleEnum = pgEnum("chat_message_roles", ["user", "assistant"]);
 
+const insightCategoryEnum = pgEnum("insight_categories", [
+  "budgeting_spending",
+  "saving_emergency",
+  "debt_credit",
+  "investing_growth",
+]);
+
+const insightStatusEnum = pgEnum("insight_statuses", [
+  "analysing",
+  "ready",
+  "failed",
+]);
+
 // Export the enum objects
 export {
   budgetPeriodEnum,
   chatMessageRoleEnum,
+  insightCategoryEnum,
+  insightStatusEnum,
   inviteStatusEnum,
   rolesEnum,
   transactionSourceEnum,
@@ -72,6 +89,19 @@ export const TransactionSource = {
 export const ChatMessageRole = {
   User: "user" as const,
   Assistant: "assistant" as const,
+} as const;
+
+export const InsightCategory = {
+  BudgetingSpending: "budgeting_spending" as const,
+  SavingEmergency: "saving_emergency" as const,
+  DebtCredit: "debt_credit" as const,
+  InvestingGrowth: "investing_growth" as const,
+} as const;
+
+export const InsightStatus = {
+  Analysing: "analysing" as const,
+  Ready: "ready" as const,
+  Failed: "failed" as const,
 } as const;
 
 export const organisations = pgTable("organisations", {
@@ -207,6 +237,25 @@ export const chatSessions = pgTable("chat_sessions", {
   archivedAt: timestamp("archived_at"),
 });
 
+export const insights = pgTable(
+  "insights",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id),
+    category: insightCategoryEnum("category").notNull(),
+    status: insightStatusEnum("status").notNull().default("analysing"),
+    title: text("title").notNull().default(""),
+    tips: jsonb("tips").$type<string[]>().notNull().default([]),
+    brainUnitOfWorkId: text("brain_unit_of_work_id"),
+    brainRunId: text("brain_run_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  table => [index("insights_org_status_idx").on(table.organisationId, table.status)]
+);
+
 export const chatMessages = pgTable("chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: uuid("session_id")
@@ -234,6 +283,10 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 export type BudgetPeriod = (typeof budgetPeriodEnum.enumValues)[number];
 export type TransactionSource = (typeof transactionSourceEnum.enumValues)[number];
 export type ChatMessageRole = (typeof chatMessageRoleEnum.enumValues)[number];
+export type Insight = typeof insights.$inferSelect;
+export type NewInsight = typeof insights.$inferInsert;
+export type InsightCategory = (typeof insightCategoryEnum.enumValues)[number];
+export type InsightStatus = (typeof insightStatusEnum.enumValues)[number];
 // Type for joined data with related entities
 export type MembershipWithUser = {
   membership: Membership;

@@ -99,6 +99,7 @@ import {
   faPaperPlane,
   faBolt,
   faCalendar,
+  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 
 export type FontAwesomeIconType = keyof typeof fontAwesomeIcons;
@@ -213,6 +214,7 @@ const fontAwesomeIcons = {
   bolt: faBolt,
   calendar: faCalendar,
   cog: faCog,
+  userTie: faUserTie,
 };
 
 interface IconProps {

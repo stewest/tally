@@ -9,3 +9,4 @@ tools:
   - list-budgets.yml
   - upsert-budget.yml
   - get-spend-summary.yml
+  - upsert-insight.yml
