@@ -29,7 +29,7 @@ cd <your-repository-folder>
 npm install
 ```
 
-`npm install` runs the `prepare` script: it prints the [Prerequisites](#prerequisites) above, then `supabase start`, writes local Supabase keys into `.env`, installs `@telos.ready/brain@latest` globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), runs `brain start`, copies the announced Brain execution key into `.env` and `brain/.env.local` as `BRAIN_API_KEY`, and runs `npm run db:push`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
+`npm install` runs the `prepare` script: it prints the [Prerequisites](#prerequisites) above, then `supabase start`, writes local Supabase keys into `.env`, installs the pinned `@telos.ready/brain` CLI globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), runs `brain start`, copies the announced Brain execution key into `.env` and `brain/.env.local` as `BRAIN_API_KEY`, and runs `npm run db:push`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
 
 You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically).
 
@@ -81,7 +81,7 @@ For hosted Supabase (stage/prod), also add Clerk as a third-party provider in th
 
 ## 4. Local Brain (dev)
 
-The schema already lives in `brain/`. You do not run `brain init`. `npm install` / `npm run prepare` already installed `@telos.ready/brain@latest`, generated `MY_APP_API_KEY` (same value as app `TOOL_API_KEY`), ran `brain start`, and wrote `BRAIN_API_KEY` from that start into the app `.env` and `brain/.env.local`.
+The schema already lives in `brain/`. You do not run `brain init`. `npm install` / `npm run prepare` already installed the pinned `@telos.ready/brain` CLI, generated `MY_APP_API_KEY` (same value as app `TOOL_API_KEY`), ran `brain start`, and wrote `BRAIN_API_KEY` from that start into the app `.env` and `brain/.env.local`.
 
 `brain start` boots SQL Server + Brain in Docker, writes `brain/.env.local` if missing, and opens the admin UI at [http://127.0.0.1:60061](http://127.0.0.1:60061) (no sign-in).
 

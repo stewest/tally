@@ -15,15 +15,17 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { keepIfSet, upsertEnvFile } from "./env-file.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const brainBin = join(root, "node_modules", ".bin", "brain");
 const brainDir = join(root, "brain");
 const exampleEnvPath = join(brainDir, ".env.example");
 const composePath = join(brainDir, "brain-compose.yml");
 const deployComposePath = join(brainDir, "brain-compose.deploy.yml");
 
-const PLACEHOLDER = /^(your-|changeme|todo$|placeholder)/i;
 const HOSTED_API_URL = "https://go.telosbrain.com";
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "host.docker.internal"]);
 
 try {
   main();
@@ -46,7 +48,7 @@ function main() {
     );
   }
 
-  const instance = resolveInstance(deployEnv);
+  const instance = resolveInstance();
   const apiUrl = keepIfSet(process.env.TELOS_BRAIN_API_URL) ?? keepIfSet(process.env.TELOS_API_URL) ?? HOSTED_API_URL;
   const anthropicKey = keepIfSet(process.env.ANTHROPIC_API_KEY);
   const voyageKey = keepIfSet(process.env.VOYAGE_API_KEY);
@@ -68,6 +70,9 @@ function main() {
   }
   if (!existsSync(composePath)) {
     throwFail(`Missing ${composePath}`);
+  }
+  if (!existsSync(brainBin)) {
+    throwFail("Missing local @telos.ready/brain. Run npm install, then retry.");
   }
 
   const envFilePath = join(brainDir, deployEnv === "prod" ? ".env.prod" : ".env.stage");
@@ -106,24 +111,10 @@ function main() {
     console.log(`allowed-callback-domains += ${callbackHosts.join(", ")}`);
   }
 
-  run(
-    "npx",
-    [
-      "--yes",
-      "@telos.ready/brain@latest",
-      "deploy",
-      deployComposePath,
-      "--env",
-      deployEnv,
-      "--instance",
-      instance,
-      "--api-url",
-      apiUrl,
-      "--api-key",
-      orgApiKey,
-    ],
-    { cwd: brainDir, env: childEnv },
-  );
+  run(brainBin, ["deploy", deployComposePath, "--env", deployEnv, "--instance", instance], {
+    cwd: brainDir,
+    env: childEnv,
+  });
 }
 
 function isSkip() {
@@ -144,7 +135,7 @@ function resolveDeployEnv() {
   return "stage";
 }
 
-function resolveInstance(deployEnv) {
+function resolveInstance() {
   const explicit = keepIfSet(process.env.BRAIN_INSTANCE);
   if (explicit) {
     return assertInstanceName(explicit);
@@ -155,8 +146,17 @@ function resolveInstance(deployEnv) {
     throwFail("BRAIN_INSTANCE is required when VERCEL_PROJECT_NAME is unset (3–63 chars, lowercase letters, digits, hyphens).");
   }
 
-  const suffix = deployEnv === "prod" ? "prod" : "preview";
-  return assertInstanceName(slugInstance(`${project}-${suffix}`));
+  return assertInstanceName(slugInstance(`${project}-${instanceSuffix()}`));
+}
+
+function instanceSuffix() {
+  if (process.env.VERCEL_ENV === "production") {
+    return "prod";
+  }
+  if (process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "development") {
+    return "preview";
+  }
+  return resolveDeployEnv() === "prod" ? "prod" : "preview";
 }
 
 function slugInstance(value) {
@@ -188,11 +188,6 @@ function resolveAppUrl() {
     return withHttps(explicit);
   }
 
-  const site = keepIfSet(process.env.NEXT_PUBLIC_SITE_URL);
-  if (site) {
-    return withHttps(site);
-  }
-
   if (process.env.VERCEL_ENV === "production") {
     const productionHost = keepIfSet(process.env.VERCEL_PROJECT_PRODUCTION_URL);
     if (productionHost) {
@@ -205,7 +200,26 @@ function resolveAppUrl() {
     return withHttps(vercelUrl);
   }
 
-  throwFail("MY_APP_API_URL (or NEXT_PUBLIC_SITE_URL / VERCEL_URL) is required so Brain can call this app.");
+  const site = keepIfSet(process.env.NEXT_PUBLIC_SITE_URL);
+  if (site && isPublicHttpsHost(site)) {
+    return withHttps(site);
+  }
+
+  throwFail(
+    "MY_APP_API_URL is required so Brain can call this app (or VERCEL_PROJECT_PRODUCTION_URL / VERCEL_URL on Vercel).",
+  );
+}
+
+function isPublicHttpsHost(value) {
+  try {
+    const url = value.includes("://") ? new URL(value) : new URL(`https://${value}`);
+    if (url.protocol !== "https:") {
+      return false;
+    }
+    return !LOCAL_HOSTS.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
 }
 
 function collectCallbackHosts(appUrl) {
@@ -218,7 +232,7 @@ function collectCallbackHosts(appUrl) {
     process.env.BRAIN_CALLBACK_DOMAIN,
   ]) {
     const host = hostnameFrom(value);
-    if (host && !hosts.includes(host)) {
+    if (host && !LOCAL_HOSTS.has(host) && !hosts.includes(host)) {
       hosts.push(host);
     }
   }
@@ -296,46 +310,6 @@ function mergeCallbackDomains(source, extraHosts) {
   return [...lines.slice(0, listStart), ...block, ...lines.slice(listEnd)].join("\n");
 }
 
-function upsertEnvFile(filePath, updates) {
-  let content = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
-  if (content.length > 0 && !content.endsWith("\n")) {
-    content += "\n";
-  }
-
-  for (const [key, raw] of Object.entries(updates)) {
-    if (raw === undefined || raw === null) {
-      continue;
-    }
-
-    const line = `${key}=${formatEnvValue(String(raw))}`;
-    const pattern = new RegExp(`^${key}=.*$`, "m");
-    if (pattern.test(content)) {
-      content = content.replace(pattern, line);
-    } else {
-      content += `${line}\n`;
-    }
-  }
-
-  writeFileSync(filePath, content);
-}
-
-function formatEnvValue(value) {
-  if (value === "") {
-    return "";
-  }
-  if (/[\s#"']/.test(value)) {
-    return `"${value.replaceAll('"', '\\"')}"`;
-  }
-  return value;
-}
-
-function keepIfSet(value) {
-  if (!value || PLACEHOLDER.test(value) || value.startsWith("(")) {
-    return undefined;
-  }
-  return value.trim();
-}
-
 function run(command, args, options) {
   const result = spawnSync(command, args, {
     stdio: "inherit",
@@ -347,8 +321,7 @@ function run(command, args, options) {
     throw result.error;
   }
   if (result.status !== 0) {
-    const redacted = args.filter((arg, i) => arg !== "--api-key" && args[i - 1] !== "--api-key");
-    throwFail(`${command} ${redacted.join(" ")} exited ${result.status}`);
+    throwFail(`${command} ${args.join(" ")} exited ${result.status}`);
   }
 }
 
