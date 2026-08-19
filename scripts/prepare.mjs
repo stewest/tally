@@ -21,6 +21,7 @@ import { randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readComposeProjectId, readLocalLockApiKey, resolveBrainCli } from "./brain-cli.mjs";
 import { keepIfSet, upsertEnvFile } from "./env-file.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -103,7 +104,7 @@ async function main() {
   });
 
   step("Starting Brain");
-  let startOutput = await runAndCapture("brain", ["start"], { cwd: brainDir });
+  let startOutput = await runBrainAndCapture(["start"], { cwd: brainDir });
 
   // Let `brain start` create `.env.local` when it is missing so it can seed
   // the well-known TELOS_* local keys. Only fall back to the example if the
@@ -257,7 +258,7 @@ function ensureBrainEnvFile() {
 
 function resolveBrainApiKeys(startOutput) {
   const announcedBrainApiKey =
-    keepIfSet(readLocalLockApiKey()) ?? keepIfSet(parseAnnouncedBrainApiKey(startOutput));
+    keepIfSet(readLocalLockApiKey(brainDir)) ?? keepIfSet(parseAnnouncedBrainApiKey(startOutput));
   const existingAppBrainApiKey = keepIfSet(readEnvValue(appEnvPath, "BRAIN_API_KEY"));
   const existingBrainEnvApiKey = keepIfSet(readEnvValue(brainEnvPath, "BRAIN_API_KEY"));
   return {
@@ -269,7 +270,7 @@ function resolveBrainApiKeys(startOutput) {
 }
 
 async function resetLocalBrainVolumeAndRestart() {
-  const composeProject = readComposeProjectId();
+  const composeProject = readComposeProjectId(brainDir);
   if (!composeProject) {
     warn("Could not determine Compose project id; skipping Brain volume reset.");
     return "";
@@ -277,7 +278,7 @@ async function resetLocalBrainVolumeAndRestart() {
 
   warn("No BRAIN_API_KEY found — resetting local Brain volume and restarting...");
   try {
-    run("brain", ["stop", "--project-id", composeProject, "--reset"], { cwd: brainDir });
+    runBrain(["stop", "--project-id", composeProject, "--reset"], { cwd: brainDir });
   } catch (error) {
     warn(
       `brain stop --reset failed (${error instanceof Error ? error.message : error}). Continuing without a new key.`,
@@ -285,7 +286,7 @@ async function resetLocalBrainVolumeAndRestart() {
     return "";
   }
 
-  return runAndCapture("brain", ["start"], { cwd: brainDir });
+  return runBrainAndCapture(["start"], { cwd: brainDir });
 }
 
 function generateApiKey() {
@@ -318,61 +319,6 @@ function parseAnnouncedBrainApiKey(output) {
 
   const onceMatch = text.match(/Save this API key now[^\n]*\n\s+(\S+)/i);
   return onceMatch?.[1]?.trim();
-}
-
-function readLockFile() {
-  const lockPath = join(brainDir, "brain.lock");
-  if (!existsSync(lockPath)) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(readFileSync(lockPath, "utf8"));
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return undefined;
-    }
-
-    return parsed;
-  } catch {
-    return undefined;
-  }
-}
-
-function readLocalLockApiKey() {
-  const local = readLockFile()?.local;
-  if (!local || typeof local !== "object" || Array.isArray(local)) {
-    return undefined;
-  }
-
-  if (typeof local.apiKey !== "string") {
-    return undefined;
-  }
-
-  return local.apiKey.trim();
-}
-
-function readComposeProjectId() {
-  const local = readLockFile()?.local;
-  const composeProject =
-    local && typeof local === "object" && !Array.isArray(local) && typeof local.composeProject === "string"
-      ? local.composeProject.trim()
-      : "";
-  if (composeProject) {
-    return composeProject;
-  }
-
-  const configPath = join(brainDir, "brain.config.toml");
-  if (!existsSync(configPath)) {
-    return undefined;
-  }
-
-  const match = readFileSync(configPath, "utf8").match(/^\s*project_id\s*=\s*"([^"]+)"/m);
-  const projectId = match?.[1]?.trim();
-  if (!projectId) {
-    return undefined;
-  }
-
-  return projectId.endsWith("-brain") ? projectId : `${projectId}-brain`;
 }
 
 function readEnvValue(filePath, key) {
@@ -429,6 +375,24 @@ function requireDocker() {
   if (info.error || info.status !== 0) {
     throw new Error("Docker is installed but the daemon is not running. Open Docker Desktop and retry.");
   }
+}
+
+function requireBrainCli() {
+  const brain = resolveBrainCli(root);
+  if (!brain) {
+    throw new Error("Brain CLI not found. Run npm install, then retry.");
+  }
+  return brain;
+}
+
+function runBrain(args, options = {}) {
+  const brain = requireBrainCli();
+  run(brain.command, [...brain.extraArgs, ...args], { ...options, display: brain.display });
+}
+
+function runBrainAndCapture(args, options = {}) {
+  const brain = requireBrainCli();
+  return runAndCapture(brain.command, [...brain.extraArgs, ...args], { ...options, display: brain.display });
 }
 
 function run(command, args, options = {}) {
@@ -512,7 +476,9 @@ function step(label) {
 }
 
 function printCommand(command, args = [], options = {}) {
-  const rendered = `$ ${[command, ...args].join(" ")}`;
+  const shownCommand = options.display ?? command;
+  const shownArgs = options.display && command === process.execPath ? args.slice(1) : args;
+  const rendered = `$ ${[shownCommand, ...shownArgs].join(" ")}`;
   const cwd = options.cwd ?? root;
   const rel = relative(root, cwd);
   const location = rel && rel !== "." ? paint(s.dim, `  (in ${rel}/)`) : "";

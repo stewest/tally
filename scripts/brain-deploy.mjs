@@ -16,9 +16,9 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { keepIfSet, upsertEnvFile } from "./env-file.mjs";
+import { resolveBrainCli } from "./brain-cli.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const brainBin = join(root, "node_modules", ".bin", "brain");
 const brainDir = join(root, "brain");
 const exampleEnvPath = join(brainDir, ".env.example");
 const composePath = join(brainDir, "brain-compose.yml");
@@ -71,8 +71,10 @@ function main() {
   if (!existsSync(composePath)) {
     throwFail(`Missing ${composePath}`);
   }
-  if (!existsSync(brainBin)) {
-    throwFail("Missing local @telos.ready/brain. Run npm install, then retry.");
+
+  const brain = resolveBrainCli(root);
+  if (!brain) {
+    throwFail("Missing @telos.ready/brain. Run npm install, then retry.");
   }
 
   const envFilePath = join(brainDir, deployEnv === "prod" ? ".env.prod" : ".env.stage");
@@ -111,7 +113,7 @@ function main() {
     console.log(`allowed-callback-domains += ${callbackHosts.join(", ")}`);
   }
 
-  run(brainBin, ["deploy", deployComposePath, "--env", deployEnv, "--instance", instance], {
+  run(brain.command, [...brain.extraArgs, "deploy", deployComposePath, "--env", deployEnv, "--instance", instance], {
     cwd: brainDir,
     env: childEnv,
   });
