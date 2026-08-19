@@ -18,9 +18,10 @@
 
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { keepIfSet, upsertEnvFile } from "./env-file.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const appEnvPath = join(root, ".env");
@@ -28,8 +29,6 @@ const appEnvExamplePath = join(root, ".env.example");
 const brainDir = join(root, "brain");
 const brainEnvPath = join(brainDir, ".env.local");
 const brainEnvExamplePath = join(brainDir, ".env.example");
-
-const PLACEHOLDER = /^(your-|changeme|todo$|placeholder)/i;
 
 const colorEnabled = (() => {
   if (process.env.FORCE_COLOR === "0") {
@@ -89,8 +88,8 @@ async function main() {
     note("npm install already in progress — skipping nested install");
   }
 
-  step("Installing latest @telos.ready/brain globally");
-  run("npm", ["install", "-g", "@telos.ready/brain@latest"]);
+  step("Installing @telos.ready/brain globally");
+  run("npm", ["install", "-g", pinnedBrainCliPackage()]);
   requireOnPath(
     "brain",
     "Global Brain CLI was installed but is not on PATH. Open a new terminal and re-run npm run prepare.",
@@ -297,11 +296,13 @@ function generateApiKey() {
   }
 }
 
-function keepIfSet(value) {
-  if (!value || PLACEHOLDER.test(value) || value.startsWith("(")) {
-    return undefined;
+function pinnedBrainCliPackage() {
+  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  const version = pkg.devDependencies?.["@telos.ready/brain"];
+  if (typeof version !== "string" || version.length === 0) {
+    throw new Error("package.json is missing devDependency @telos.ready/brain");
   }
-  return value;
+  return `@telos.ready/brain@${version.replace(/^[~^]/, "")}`;
 }
 
 function shouldWriteBrainApiKey(existing, announced) {
@@ -385,36 +386,6 @@ function readEnvValue(filePath, key) {
   }
 
   return stripQuotes(match[1].replace(/\r$/, "").trim());
-}
-
-function upsertEnvFile(filePath, updates) {
-  let content = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
-  if (content.length > 0 && !content.endsWith("\n")) {
-    content += "\n";
-  }
-
-  for (const [key, raw] of Object.entries(updates)) {
-    if (raw === undefined || raw === null) {
-      continue;
-    }
-
-    const line = `${key}=${formatEnvValue(String(raw))}`;
-    const pattern = new RegExp(`^${key}=.*$`, "m");
-    if (pattern.test(content)) {
-      content = content.replace(pattern, line);
-    } else {
-      content += `${line}\n`;
-    }
-  }
-
-  writeFileSync(filePath, content);
-}
-
-function formatEnvValue(value) {
-  if (/[\s#"']/.test(value)) {
-    return `"${value.replaceAll('"', '\\"')}"`;
-  }
-  return value;
 }
 
 function stripQuotes(value) {

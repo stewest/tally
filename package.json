@@ -3,7 +3,8 @@
   "scripts": {
     "prepare": "node scripts/prepare.mjs",
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/vercel-build.mjs",
+    "brain:deploy": "node scripts/brain-deploy.mjs",
     "start": "next start",
     "db:migrate": "npx drizzle-kit migrate",
     "db:generate": "npx drizzle-kit generate",
@@ -47,6 +48,7 @@
     "@storybook/addon-vitest": "^10.5.8",
     "@storybook/nextjs-vite": "^10.5.8",
     "@tailwindcss/postcss": "^4.3.3",
+    "@telos.ready/brain": "0.4.7",
     "@types/node": "25.9.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "19.2.4",
