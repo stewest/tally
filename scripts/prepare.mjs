@@ -6,10 +6,12 @@
  * Skip with CI=1 or TEL_SKIP_PREPARE=1.
  *
  * After this finishes, fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and any
- * remaining MY_APP_* values in brain/.env.local.
+ * remaining MY_APP_* values in brain/.env.local. BRAIN_API_KEY is copied from
+ * `brain start` (status box and brain.lock local.apiKey) into .env and
+ * brain/.env.local.
  */
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -70,20 +72,43 @@ async function main() {
   });
 
   step("Starting Brain");
-  run("brain", ["start"], { cwd: brainDir });
+  const startOutput = await runAndCapture("brain", ["start"], { cwd: brainDir });
 
   // Let `brain start` create `.env.local` when it is missing so it can seed
   // the well-known TELOS_* local keys. Only fall back to the example if the
-  // file still is not there, then write the shared tool handshake.
+  // file still is not there, then write the shared tool handshake and the
+  // execution API key announced at start (status box + brain.lock local.apiKey).
   if (!existsSync(brainEnvPath)) {
     ensureCopied(brainEnvExamplePath, brainEnvPath);
   }
+
+  const announcedBrainApiKey =
+    keepIfSet(readLocalLockApiKey()) ?? keepIfSet(parseAnnouncedBrainApiKey(startOutput));
+  const existingAppBrainApiKey = keepIfSet(readEnvValue(appEnvPath, "BRAIN_API_KEY"));
+  const existingBrainEnvApiKey = keepIfSet(readEnvValue(brainEnvPath, "BRAIN_API_KEY"));
+  const brainApiKey = announcedBrainApiKey ?? existingBrainEnvApiKey ?? existingAppBrainApiKey;
+
   upsertEnvFile(brainEnvPath, {
     MY_APP_API_KEY: toolApiKey,
     MY_APP_API_URL:
       keepIfSet(readEnvValue(brainEnvPath, "MY_APP_API_URL")) ??
       "http://host.docker.internal:3000",
+    ...(shouldWriteBrainApiKey(existingBrainEnvApiKey, announcedBrainApiKey)
+      ? { BRAIN_API_KEY: brainApiKey }
+      : {}),
   });
+
+  if (brainApiKey && shouldWriteBrainApiKey(existingAppBrainApiKey, announcedBrainApiKey)) {
+    upsertEnvFile(appEnvPath, { BRAIN_API_KEY: brainApiKey });
+  }
+
+  if (brainApiKey) {
+    console.log("  BRAIN_API_KEY is set in .env and brain/.env.local");
+  } else {
+    console.log(
+      "  BRAIN_API_KEY was not announced. Re-run npm run prepare after a first-time brain start, or copy it from the Brain API Key row in `brain start` / `brain status`.",
+    );
+  }
 
   console.log(`
 Local stack is up.
@@ -100,6 +125,10 @@ Next:
 
 App .env TOOL_API_KEY and brain/.env.local MY_APP_API_KEY now match.
 `);
+
+  if (brainApiKey) {
+    console.log("App .env BRAIN_API_KEY and brain/.env.local BRAIN_API_KEY now match.\n");
+  }
 }
 
 function getSkipReason() {
@@ -161,10 +190,52 @@ function generateApiKey() {
 }
 
 function keepIfSet(value) {
-  if (!value || PLACEHOLDER.test(value)) {
+  if (!value || PLACEHOLDER.test(value) || value.startsWith("(")) {
     return undefined;
   }
   return value;
+}
+
+function shouldWriteBrainApiKey(existing, announced) {
+  return Boolean(announced || !existing);
+}
+
+function parseAnnouncedBrainApiKey(output) {
+  const text = String(output).replace(/\u001b\[[0-9;]*m/g, "");
+  const boxMatch = text.match(/Brain API Key\s*[│|]\s*(\S+)/i);
+  if (boxMatch?.[1]) {
+    return boxMatch[1].replace(/[│|]+$/g, "").trim();
+  }
+
+  const onceMatch = text.match(/Save this API key now[^\n]*\n\s+(\S+)/i);
+  return onceMatch?.[1]?.trim();
+}
+
+function readLocalLockApiKey() {
+  const lockPath = join(brainDir, "brain.lock");
+  if (!existsSync(lockPath)) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(lockPath, "utf8"));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return undefined;
+    }
+
+    const local = parsed.local;
+    if (!local || typeof local !== "object" || Array.isArray(local)) {
+      return undefined;
+    }
+
+    if (typeof local.apiKey !== "string") {
+      return undefined;
+    }
+
+    return local.apiKey.trim();
+  } catch {
+    return undefined;
+  }
 }
 
 function readEnvValue(filePath, key) {
@@ -266,6 +337,35 @@ function run(command, args, options = {}) {
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(" ")} exited ${result.status}`);
   }
+}
+
+function runAndCapture(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd ?? root,
+      env: process.env,
+    });
+    let output = "";
+
+    child.stdout.on("data", (chunk) => {
+      const text = String(chunk);
+      output += text;
+      process.stdout.write(text);
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = String(chunk);
+      output += text;
+      process.stderr.write(text);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`${command} ${args.join(" ")} exited ${code}`));
+        return;
+      }
+      resolve(output);
+    });
+  });
 }
 
 function step(label) {

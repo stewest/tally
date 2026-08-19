@@ -28,7 +28,7 @@ cd <your-repository-folder>
 npm install
 ```
 
-`npm install` runs the `prepare` script: `supabase start`, writes local Supabase keys into `.env`, installs `@telos.ready/brain@latest` globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), and runs `brain start`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
+`npm install` runs the `prepare` script: `supabase start`, writes local Supabase keys into `.env`, installs `@telos.ready/brain@latest` globally, generates a shared tool API key (`TOOL_API_KEY` / `MY_APP_API_KEY`), runs `brain start`, and copies the announced Brain execution key into `.env` and `brain/.env.local` as `BRAIN_API_KEY`. Docker Desktop and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) must already be available.
 
 You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically).
 
@@ -86,7 +86,7 @@ Local development uses `db:push`. On hosted Postgres, apply migrations with `npm
 
 ## 4. Local Brain (dev)
 
-The schema already lives in `brain/`. You do not run `brain init`. `npm install` / `npm run prepare` already installed `@telos.ready/brain@latest`, generated `MY_APP_API_KEY` (same value as app `TOOL_API_KEY`), and ran `brain start`.
+The schema already lives in `brain/`. You do not run `brain init`. `npm install` / `npm run prepare` already installed `@telos.ready/brain@latest`, generated `MY_APP_API_KEY` (same value as app `TOOL_API_KEY`), ran `brain start`, and wrote `BRAIN_API_KEY` from that start into the app `.env` and `brain/.env.local`.
 
 `brain start` boots SQL Server + Brain in Docker, writes `brain/.env.local` if missing, and opens the admin UI at [http://127.0.0.1:60061](http://127.0.0.1:60061) (no sign-in).
 
@@ -96,21 +96,12 @@ Fill in the keys `prepare` cannot know, in `brain/.env.local`:
 ANTHROPIC_API_KEY=your-anthropic-api-key
 VOYAGE_API_KEY=your-voyage-api-key
 MY_APP_API_URL=http://host.docker.internal:3000
-# MY_APP_API_KEY is already set by prepare
+# MY_APP_API_KEY and BRAIN_API_KEY are already set by prepare
 ```
 
 Leave the `TELOS_*` values that `brain start` wrote — they are the well-known local org key and `http://127.0.0.1:60061`. `TELOS_*` is CLI config only; it is never uploaded to the brain.
 
-```bash
-brain deploy --env local --instance local-brain
-```
-
-**Copy the Brain execution API key from stdout immediately.** First deploy prints it once. Put the same value in:
-
-- app `.env` → `BRAIN_API_KEY`
-- `brain/.env.local` → `BRAIN_API_KEY`
-
-Then deploy again so the brain stores it for tool callbacks:
+Deploy so the brain stores `BRAIN_API_KEY` for tool callbacks:
 
 ```bash
 brain deploy --env local --instance local-brain
@@ -130,7 +121,7 @@ BRAIN_API_KEY=your-brain-execution-api-key
 TOOL_API_KEY=your-shared-tool-api-key
 ```
 
-`prepare` already sets `BRAIN_URL` and a matching `TOOL_API_KEY` / `MY_APP_API_KEY`. You still add `BRAIN_API_KEY` from the first deploy below. `BRAIN_API_KEY` must match on both sides.
+`prepare` already sets `BRAIN_URL`, a matching `TOOL_API_KEY` / `MY_APP_API_KEY`, and `BRAIN_API_KEY` on both sides from `brain start`. `BRAIN_API_KEY` must stay in sync.
 
 | Direction | Auth | Purpose |
 |---|---|---|

@@ -12,12 +12,13 @@ Precise enough for Cursor / Claude Code. Complete local steps in the root README
 ## Local (dev)
 
 ```bash
-# From repo root: npm install (or npm run prepare) starts Brain and writes MY_APP_API_KEY
+# From repo root: npm install (or npm run prepare) starts Brain and writes
+# MY_APP_API_KEY plus BRAIN_API_KEY (from brain start) into .env.local and the app .env
 # Then fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and remaining MY_APP_* in .env.local
 brain deploy --env local --instance local-brain
 ```
 
-**Capture the Brain API key from stdout immediately.** First deploy prints it once. Put it in this folder’s `.env.local` as `BRAIN_API_KEY` and in the app `.env` as `BRAIN_API_KEY`. Do not delete `brain.lock`.
+Do not delete `brain.lock`. Hosted first deploy still prints a **new** execution key — do not reuse the local one.
 
 `brain snapshot --env local --instance local-brain` before redeploying if the live brain has learned.
 
