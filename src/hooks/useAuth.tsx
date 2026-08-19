@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth } from "@/context/SessionAuthContext";
 import { useToast } from "@/components/ui/Toast";
 import axios from "axios";
 
 export const useCurrentUser = () => {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSessionAuth();
 
   return useQuery({
     queryKey: ["currentUser"],

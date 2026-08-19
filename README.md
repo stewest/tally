@@ -4,19 +4,19 @@ A Demo personal-finance app/ (Next.js, Clerk, Supabase) with a Telos Brain schem
 
 | Environment | App | Brain |
 |---|---|---|
-| **Dev (local)** | `npm run dev` + Clerk + local Supabase | Docker on your machine (`brain start`) |
+| **Dev (local)** | `npm run dev` + local Supabase (Clerk optional) | Docker on your machine (`brain start`) |
 | **Stage / prod** | Your host (e.g. Vercel) + hosted Supabase | [Telos Hosted](https://go.telosbrain.com) ($10 free credit) |
 
-Local Brain is self-hosted Docker. Clerk is required locally — it authenticates the host app. Local Brain itself does not use Clerk.
+Local Brain is self-hosted Docker and does not use Clerk. The host app can run locally without Clerk: `next dev` with placeholder Clerk keys signs you in as `local@localhost` in a seeded **Local** organisation. Clerk is required on Vercel / production.
 
-After setup you can sign in, open **Chat**, and paste a bank statement (`samples/bank-statement.txt`).
+After setup you can open **Chat** and paste a bank statement (`samples/bank-statement.txt`).
 
 ## Prerequisites
 
 - Node.js 25+ (see `.nvmrc`)
 - Docker Desktop (or Engine + Compose on Linux)
 - [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) (`brew install supabase/tap/supabase`)
-- A [Clerk](https://clerk.com) account
+- A [Clerk](https://clerk.com) account (optional locally; required for stage/prod)
 - An [Anthropic](https://console.anthropic.com) API key
 - A [Voyage](https://dash.voyageai.com) API key (embeddings; this brain defaults to `voyage-3-lite`)
 
@@ -38,7 +38,11 @@ Do not commit `.env` files. Optional app vars (already defaulted in code):
 
 Postmark (`POSTMARK_SERVER_TOKEN`, `FROM_EMAIL`) is only required when inviting teammates, not for first chat.
 
-## 2. Clerk (required locally)
+## 2. Clerk (optional locally)
+
+Local `npm run dev` works without Clerk keys. Leave the placeholder values in `.env`. The app skips Clerk and seeds `local@localhost` plus a **Local** organisation on first request.
+
+Add real Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` starting with `pk_`) when you want the production sign-in path locally. Clerk is required on Vercel / production (`NODE_ENV=production` or `VERCEL` set) — the bypass never runs there.
 
 1. Create an application at [dashboard.clerk.com](https://dashboard.clerk.com).
 2. Copy the **Publishable** and **Secret** keys into `.env`:
@@ -150,7 +154,7 @@ From the repo root (not `brain/`):
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), sign in with Clerk, create an organisation, then:
+Open [http://localhost:3000](http://localhost:3000). Without Clerk keys you land on **Dashboard** as `local@localhost`. With Clerk, sign in and create an organisation, then:
 
 1. Open **Chat** and send a message (workflow `WF-CHAT`). Chats persist in the sidebar; titles are generated automatically (`WF-CHAT-TITLE`). You can watch tools run while Brain works.
 2. Paste `samples/bank-statement.txt` into chat, or use **Transactions** / **Budgets**.
@@ -233,7 +237,7 @@ Schema edits under `brain/` go live with another `brain deploy --env local` (dev
 ## Tech stack
 
 - [Next.js](https://nextjs.org/) — React framework
-- [Clerk](https://clerk.com/) — Authentication (required locally and in production)
+- [Clerk](https://clerk.com/) — Authentication (optional locally; required in production)
 - [Supabase](https://supabase.com/) — Database and storage
 - [Drizzle ORM](https://orm.drizzle.team/) — Database ORM
 - [Telos Brain](https://go.telosbrain.com) — Local Docker (dev) or Telos Hosted (stage/prod)
