@@ -2,7 +2,6 @@
   "private": true,
   "scripts": {
     "prepare": "node scripts/prepare.mjs",
-    "reset": "node scripts/reset.mjs",
     "stack:reset": "node scripts/reset.mjs",
     "dev": "next dev",
     "build": "node scripts/vercel-build.mjs",
