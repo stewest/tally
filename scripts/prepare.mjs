@@ -8,7 +8,10 @@
  * After this finishes, fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and any
  * remaining MY_APP_* values in brain/.env.local. BRAIN_API_KEY is copied from
  * `brain start` (status box and brain.lock local.apiKey) into .env and
- * brain/.env.local.
+ * brain/.env.local. If start cannot re-print the key (instance already in the
+ * Docker volume) and neither env file has a real value, prepare runs
+ * `brain stop --project-id <compose> --reset` and starts again so a new key
+ * can be issued.
  */
 
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -72,21 +75,26 @@ async function main() {
   });
 
   step("Starting Brain");
-  const startOutput = await runAndCapture("brain", ["start"], { cwd: brainDir });
+  let startOutput = await runAndCapture("brain", ["start"], { cwd: brainDir });
 
   // Let `brain start` create `.env.local` when it is missing so it can seed
   // the well-known TELOS_* local keys. Only fall back to the example if the
   // file still is not there, then write the shared tool handshake and the
   // execution API key announced at start (status box + brain.lock local.apiKey).
-  if (!existsSync(brainEnvPath)) {
-    ensureCopied(brainEnvExamplePath, brainEnvPath);
-  }
+  ensureBrainEnvFile();
 
-  const announcedBrainApiKey =
-    keepIfSet(readLocalLockApiKey()) ?? keepIfSet(parseAnnouncedBrainApiKey(startOutput));
-  const existingAppBrainApiKey = keepIfSet(readEnvValue(appEnvPath, "BRAIN_API_KEY"));
-  const existingBrainEnvApiKey = keepIfSet(readEnvValue(brainEnvPath, "BRAIN_API_KEY"));
-  const brainApiKey = announcedBrainApiKey ?? existingBrainEnvApiKey ?? existingAppBrainApiKey;
+  let { announcedBrainApiKey, existingAppBrainApiKey, existingBrainEnvApiKey, brainApiKey } =
+    resolveBrainApiKeys(startOutput);
+
+  // Fresh checkout with a leftover Docker volume: createBrain 409s, lock gets
+  // `(already created — …)`, and the key cannot be retrieved. Reset only when
+  // no real key exists in lock, stdout, or either env file.
+  if (!brainApiKey) {
+    startOutput = await resetLocalBrainVolumeAndRestart();
+    ensureBrainEnvFile();
+    ({ announcedBrainApiKey, existingAppBrainApiKey, existingBrainEnvApiKey, brainApiKey } =
+      resolveBrainApiKeys(startOutput));
+  }
 
   upsertEnvFile(brainEnvPath, {
     MY_APP_API_KEY: toolApiKey,
@@ -106,7 +114,7 @@ async function main() {
     console.log("  BRAIN_API_KEY is set in .env and brain/.env.local");
   } else {
     console.log(
-      "  BRAIN_API_KEY was not announced. Re-run npm run prepare after a first-time brain start, or copy it from the Brain API Key row in `brain start` / `brain status`.",
+      "  BRAIN_API_KEY was not announced. The execution key is shown only once at create. Reset the local volume and start again: `brain stop --project-id <compose-from-brain-status> --reset`, then `npm run prepare`.",
     );
   }
 
@@ -181,6 +189,45 @@ function resolveToolApiKey() {
   return generateApiKey();
 }
 
+function ensureBrainEnvFile() {
+  if (!existsSync(brainEnvPath)) {
+    ensureCopied(brainEnvExamplePath, brainEnvPath);
+  }
+}
+
+function resolveBrainApiKeys(startOutput) {
+  const announcedBrainApiKey =
+    keepIfSet(readLocalLockApiKey()) ?? keepIfSet(parseAnnouncedBrainApiKey(startOutput));
+  const existingAppBrainApiKey = keepIfSet(readEnvValue(appEnvPath, "BRAIN_API_KEY"));
+  const existingBrainEnvApiKey = keepIfSet(readEnvValue(brainEnvPath, "BRAIN_API_KEY"));
+  return {
+    announcedBrainApiKey,
+    existingAppBrainApiKey,
+    existingBrainEnvApiKey,
+    brainApiKey: announcedBrainApiKey ?? existingBrainEnvApiKey ?? existingAppBrainApiKey,
+  };
+}
+
+async function resetLocalBrainVolumeAndRestart() {
+  const composeProject = readComposeProjectId();
+  if (!composeProject) {
+    console.log("  Could not determine Compose project id; skipping Brain volume reset.");
+    return "";
+  }
+
+  console.log("  No BRAIN_API_KEY found — resetting local Brain volume and restarting...");
+  try {
+    run("brain", ["stop", "--project-id", composeProject, "--reset"], { cwd: brainDir });
+  } catch (error) {
+    console.log(
+      `  brain stop --reset failed (${error instanceof Error ? error.message : error}). Continuing without a new key.`,
+    );
+    return "";
+  }
+
+  return runAndCapture("brain", ["start"], { cwd: brainDir });
+}
+
 function generateApiKey() {
   try {
     return execFileSync("openssl", ["rand", "-hex", "32"], { encoding: "utf8" }).trim();
@@ -211,7 +258,7 @@ function parseAnnouncedBrainApiKey(output) {
   return onceMatch?.[1]?.trim();
 }
 
-function readLocalLockApiKey() {
+function readLockFile() {
   const lockPath = join(brainDir, "brain.lock");
   if (!existsSync(lockPath)) {
     return undefined;
@@ -223,19 +270,47 @@ function readLocalLockApiKey() {
       return undefined;
     }
 
-    const local = parsed.local;
-    if (!local || typeof local !== "object" || Array.isArray(local)) {
-      return undefined;
-    }
-
-    if (typeof local.apiKey !== "string") {
-      return undefined;
-    }
-
-    return local.apiKey.trim();
+    return parsed;
   } catch {
     return undefined;
   }
+}
+
+function readLocalLockApiKey() {
+  const local = readLockFile()?.local;
+  if (!local || typeof local !== "object" || Array.isArray(local)) {
+    return undefined;
+  }
+
+  if (typeof local.apiKey !== "string") {
+    return undefined;
+  }
+
+  return local.apiKey.trim();
+}
+
+function readComposeProjectId() {
+  const local = readLockFile()?.local;
+  const composeProject =
+    local && typeof local === "object" && !Array.isArray(local) && typeof local.composeProject === "string"
+      ? local.composeProject.trim()
+      : "";
+  if (composeProject) {
+    return composeProject;
+  }
+
+  const configPath = join(brainDir, "brain.config.toml");
+  if (!existsSync(configPath)) {
+    return undefined;
+  }
+
+  const match = readFileSync(configPath, "utf8").match(/^\s*project_id\s*=\s*"([^"]+)"/m);
+  const projectId = match?.[1]?.trim();
+  if (!projectId) {
+    return undefined;
+  }
+
+  return projectId.endsWith("-brain") ? projectId : `${projectId}-brain`;
 }
 
 function readEnvValue(filePath, key) {
