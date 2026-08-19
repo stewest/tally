@@ -130,6 +130,7 @@ Still required in brain/.env.local (this script does not set these):
 Next:
   npm run db:push
   cd brain && brain deploy --env local --instance local-brain
+  npm run dev          # open http://localhost:3000
 
 App .env TOOL_API_KEY and brain/.env.local MY_APP_API_KEY now match.
 `);
