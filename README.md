@@ -15,7 +15,7 @@ Demo app (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/` with t
 | Environment | App | Brain |
 |---|---|---|
 | **Dev (local)** | `npm run dev` + local Supabase (Clerk optional) | Docker on your machine (`brain start`) |
-| **Stage / prod** | Your host (e.g. Vercel) + hosted Supabase | [Telos Hosted](https://go.telosbrain.com) ($10 free credit) |
+| **Preview / Production** | Vercel + hosted Supabase | [Telos Hosted](https://go.telosbrain.com) (`npm run brain:deploy` on the Vercel build) |
 
 Local Brain is self-hosted Docker and does not use Clerk. The host app can run locally without Clerk: `next dev` with placeholder Clerk keys signs you in as `local@localhost` in a seeded **Local** organisation. Clerk is required on Vercel / production.
 
@@ -146,47 +146,40 @@ brain status    # API URL, health, Compose project id
 brain stop --project-id <id-from-status>
 ```
 
-## Stage and production (Telos Hosted)
+## Stage and production (Vercel + Telos Hosted)
 
-Use local Docker Brain for **dev** only. For **stage** and **prod**, deploy the same `brain/` schema to [Telos Hosted](https://go.telosbrain.com). Sign up there (includes $10 free credit) and mint an organisation API key.
+Use local Docker Brain for **dev** only. For Preview and Production, Vercel deploys the Next.js app **and** the `brain/` schema together, the same way it applies Drizzle migrations. Sign up at [Telos Hosted](https://go.telosbrain.com) (includes $10 free credit) and mint an organisation API key.
+
+On Vercel, `npm run build` runs `db:migrate`, then `brain:deploy` (to [go.telosbrain.com](https://go.telosbrain.com)), then `next build`. Local `npm run build` is still `next build` only.
+
+Set these on **Production** and **Preview** (different values, like `POSTGRES_URL`):
+
+| Variable | Purpose |
+|---|---|
+| `TELOS_BRAIN_ORG_API_KEY` | Org key from go.telosbrain.com (CLI only, never uploaded to the brain) |
+| `ANTHROPIC_API_KEY` | Required for this brain’s workflows |
+| `VOYAGE_API_KEY` | Required (`voyage-3-lite` embeddings) |
+| `TOOL_API_KEY` | Shared tool handshake; copied to `MY_APP_API_KEY` on deploy |
+| `BRAIN_URL` | App-side Execution API: `https://go.telosbrain.com` |
+| `BRAIN_API_KEY` | Per-brain execution key (see first deploy below) |
+| `POSTGRES_URL` | Hosted Postgres (Drizzle migrate) |
+| `BRAIN_INSTANCE` | Optional. Default `{VERCEL_PROJECT_NAME}-prod` or `{VERCEL_PROJECT_NAME}-preview` |
+| `MY_APP_API_URL` | Optional override. Default: production URL, or the Preview deployment URL |
+| `TELOS_BRAIN_API_URL` | Optional. Default `https://go.telosbrain.com` |
+| `BRAIN_CALLBACK_DOMAIN` | Optional extra hostname merged into `allowed-callback-domains` |
+| `BRAIN_DEPLOY` | Set to `0` to skip Brain deploy (app + Drizzle still deploy) |
+
+Also set Clerk, Supabase, and `NEXT_PUBLIC_SITE_URL` per environment. Keep `TOOL_API_KEY` / `MY_APP_API_KEY` and `BRAIN_API_KEY` in sync per environment. Preview and Production **must** use different `BRAIN_INSTANCE` names (the defaults already do). Do not reuse `local-brain`.
+
+The deploy script copies `brain/.env.example` so declared key names exist, then Vercel env vars override placeholders. It also merges the current app hostname into `allowed-callback-domains` in an ephemeral compose file (Preview URLs change; no wildcards). Add a stable custom domain to `allowed-callback-domains` in `brain/brain-compose.yml` as well.
+
+**First hosted deploy:** the CLI prints a **new** execution API key in the Vercel build log (do not reuse the local key). Paste it into that environment’s `BRAIN_API_KEY`, then redeploy so it is uploaded for tool callbacks.
+
+To deploy the brain from a laptop with the same env vars:
 
 ```bash
-cp brain/.env.example brain/.env.stage   # or .env.prod
+npm run brain:deploy
 ```
-
-Set at least:
-
-```bash
-TELOS_BRAIN_ORG_API_KEY=your-org-api-key
-TELOS_BRAIN_API_URL=https://go.telosbrain.com
-ANTHROPIC_API_KEY=your-anthropic-api-key
-VOYAGE_API_KEY=your-voyage-api-key
-MY_APP_API_URL=https://your-app.example.com
-MY_APP_API_KEY=your-shared-tool-api-key
-```
-
-Add your public app hostname to `allowed-callback-domains` in `brain/brain-compose.yml`, then:
-
-```bash
-cd brain
-brain deploy --env stage --instance your-stage-brain
-# or:
-brain deploy --env prod --instance your-prod-brain
-```
-
-First hosted deploy prints a **new** execution API key (do not reuse the local one). On the deployed app (Vercel or your host) set:
-
-```bash
-BRAIN_URL=https://go.telosbrain.com
-BRAIN_API_KEY=your-hosted-brain-execution-api-key
-TOOL_API_KEY=your-shared-tool-api-key
-NEXT_PUBLIC_SITE_URL=https://your-app.example.com
-NEXT_PUBLIC_APP_NAME=TALLY
-```
-
-Keep `TOOL_API_KEY` / `MY_APP_API_KEY` and both `BRAIN_API_KEY`s in sync per environment. Use a different instance name from `local-brain`.
-
-Deploy the Next.js app as usual. Set Clerk, Supabase, `POSTGRES_URL`, Brain, and `NEXT_PUBLIC_SITE_URL` for Preview and Production. Apply schema with `npm run db:migrate` against hosted Postgres (add it to the Vercel build command if you want it to run automatically).
 
 Self-hosted Docker Brain on your own servers is the same stack as local (`brain start` / BRA106). Stage and prod in this template are intended to use Telos Hosted.
 
@@ -196,6 +189,7 @@ Self-hosted Docker Brain on your own servers is the same stack as local (`brain 
 npm run db:push       # local: apply schema.ts directly
 npm run db:generate   # write a migration for deploy
 npm run db:migrate    # apply migrations (Vercel / production)
+npm run brain:deploy  # deploy brain/ to Telos Hosted (Vercel / production)
 ```
 
 Do not commit `.env`, `brain/.env.local`, `brain/.env.stage`, `brain/.env.prod`, or `brain.lock` if it contains keys.
@@ -209,11 +203,13 @@ Do not commit `.env`, `brain/.env.local`, `brain/.env.stage`, `brain/.env.prod`,
 | `BRAIN_API_KEY was not announced` | Leftover local Brain Docker volume; the execution key is shown only once at create. `prepare` resets that volume when neither env file has a real key. Manual recovery: `brain stop --project-id <compose-from-brain-status> --reset`, then `npm run prepare` |
 | Tools never hit Next.js | `MY_APP_API_URL` used `localhost` instead of `http://host.docker.internal:3000` |
 | Tool webhook 401 | `TOOL_API_KEY` ≠ `MY_APP_API_KEY`, or Brain keys differ |
-| Deploy fails on embeddings | Blank `VOYAGE_API_KEY` in the brain env file |
+| Deploy fails on embeddings | Blank `VOYAGE_API_KEY` in the Vercel env (or brain env file) |
+| Vercel build fails at `brain:deploy` | Missing `TELOS_BRAIN_ORG_API_KEY` / `ANTHROPIC_API_KEY` / `VOYAGE_API_KEY` / `TOOL_API_KEY`. Set `BRAIN_DEPLOY=0` to ship the app first |
+| Tools never hit the Vercel app | Hostname missing from `allowed-callback-domains`, or `MY_APP_API_URL` / `BRAIN_API_KEY` still a placeholder after first hosted deploy |
 | Port 1433 already allocated | Change `sql_port` in `brain/brain.config.toml`, then `brain start` again |
 | Version conflict on redeploy | `brain snapshot --env local --instance local-brain` then deploy |
 
-Schema edits under `brain/` go live with another `brain deploy --env local` (dev) or `--env stage` / `--env prod` (hosted). Details: [`brain/README.md`](brain/README.md) and skill **BRA106**.
+Schema edits under `brain/` go live with another `brain deploy --env local` (dev) or the Vercel build / `npm run brain:deploy` (hosted). Details: [`brain/README.md`](brain/README.md) and skill **BRA106**.
 
 ## Tech stack
 

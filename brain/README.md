@@ -5,7 +5,7 @@ Schema for the host app in the parent folder. **First-time install:** follow the
 | Environment | Brain | Command |
 |---|---|---|
 | **Dev** | Local Docker | `brain start` then `brain deploy --env local --instance local-brain` |
-| **Stage / prod** | [Telos Hosted](https://go.telosbrain.com) ($10 free credit) | `brain deploy --env stage` or `--env prod` |
+| **Preview / Production** | [Telos Hosted](https://go.telosbrain.com) ($10 free credit) | Vercel `npm run build` runs `npm run brain:deploy` (or run it from the repo root) |
 
 Precise enough for Cursor / Claude Code. Complete local steps in the root README first.
 
@@ -25,16 +25,20 @@ Do not delete `brain.lock`. Hosted first deploy still prints a **new** execution
 
 Full local stack behaviour: skill **BRA106** (`skills/telos-brain/concepts/BRA106-local-development.md`).
 
-## Stage and production (Telos Hosted)
+## Preview and production (Telos Hosted)
 
-Copy `.env.example` to `.env.stage` or `.env.prod`. Set a real `TELOS_BRAIN_ORG_API_KEY` from https://go.telosbrain.com, `TELOS_BRAIN_API_URL=https://go.telosbrain.com`, LLM/embedding keys, and `MY_APP_API_URL` to the public HTTPS app URL. Add that hostname to `allowed-callback-domains` in `brain-compose.yml`.
+Vercel deploys this schema on every Preview and Production build (`npm run brain:deploy` from the repo root), next to Drizzle migrate. Set `TELOS_BRAIN_ORG_API_KEY`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and `TOOL_API_KEY` on each Vercel environment. Preview defaults to instance `{project}-preview` (`--env stage`); Production to `{project}-prod` (`--env prod`). Override with `BRAIN_INSTANCE`.
+
+The script copies `.env.example` to `.env.stage` / `.env.prod` so declared keys exist; Vercel secrets override placeholders. It merges the current app hostname into `allowed-callback-domains` (exact hosts only — no wildcards). Add a stable custom domain to `brain-compose.yml` as well.
 
 ```bash
-brain deploy --env stage --instance your-stage-brain
-brain deploy --env prod --instance your-prod-brain
+# from repo root (same env vars as Vercel)
+npm run brain:deploy
+# skip on Vercel until Telos Hosted is configured:
+# BRAIN_DEPLOY=0
 ```
 
-Hosted first deploy prints a **new** execution key — do not reuse the local key.
+Hosted first deploy prints a **new** execution key in the build log — do not reuse the local key. Paste it into that environment’s `BRAIN_API_KEY` and redeploy.
 
 ## Building the schema
 
@@ -79,6 +83,7 @@ Gitignore (do not commit):
 - `.env`, `.env.local`, `.env.stage`, `.env.prod`
 - `.brain/` (Compose state, encryption key)
 - `brain.lock` if it contains API keys
+- `brain-compose.deploy.yml` (ephemeral Vercel compose with extra callback hosts)
 - `node_modules/`, `dist/`
 
 Commit `.env.example` with placeholder values only.
