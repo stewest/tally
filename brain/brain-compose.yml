@@ -22,6 +22,7 @@ allowed-callback-domains:
   - host.docker.internal
   - localhost
   - 127.0.0.1
+  - tally-stewwest.vercel.app
 
 # Entities: top-level things the brain reasons about (multi-tenancy anchor).
 entities:
