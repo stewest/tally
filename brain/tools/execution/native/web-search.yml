@@ -1,6 +1,5 @@
 name: web_search
 version: 1
-description: >-
-  Searches the web for up-to-date information and returns relevant results.
+description: Searches the web for up-to-date information and returns relevant results.
 native:
   type: web_search

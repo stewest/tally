@@ -1,12 +1,8 @@
 ---
 name: Local Development
 code: BRA106
-version: 10
-description: How to run Telos Brain locally with the CLI and Docker — start,
-  stop, deploy, credentials, pointing connectors at a host app via
-  host.docker.internal, and running workflows against a local LLM (Ollama or
-  llama.cpp). Use when developing a brain or a host application against a
-  local Brain stack.
+version: 3
+description: How to run Telos Brain locally with the CLI and Docker — start, stop, deploy, credentials, and pointing connectors at a host app via host.docker.internal. Use when developing a brain or a host application against a local Brain stack.
 ---
 
 # Local Development
@@ -25,8 +21,8 @@ secrets, see **BRA202**. For connectors, see **BRA209**.
 
 - **Node.js 25+**
 - **Docker** (Desktop on Mac/Windows, or Engine + Compose on Linux)
-- **Git** and GitHub HTTPS access, if you scaffold with `brain init`
-  (`https://github.com/telos-brain/starter-brain.git`)
+- **Git** and GitHub SSH access, if you scaffold with `brain init`
+  (`git@github.com:telos-brain/starter-brain.git`)
 
 ---
 
@@ -60,8 +56,6 @@ brain stop --project-id <id>   # tear down that stack (Compose id from status)
 - Creates `.env.local` from `.env.example` when missing — sets
   `TELOS_BRAIN_API_URL` and the well-known local `TELOS_BRAIN_ORG_API_KEY`;
   never overwrites an existing file
-- Writes the local brain Execution API key to `BRAIN_API_KEY` in `.env.local`
-  when the key is available (first create, or reused from `brain.lock`)
 - Starts SQL + Brain server from `supporttelosready/telos-brain:latest`
 - Boots a synthetic local SuperAdmin and a well-known organisation API key
 - Opens the admin UI at `http://127.0.0.1:60061` (no sign-in)
@@ -107,24 +101,16 @@ TELOS_BRAIN_API_URL=http://127.0.0.1:60061
 to the brain. Every other declared variable in `.env.local` **is** uploaded on
 deploy (encrypted at rest). Blank values are skipped.
 
-Before the first `brain deploy --env local`, fill the keys your schema actually
-uses. Deploy succeeds with none of them; features that need a key simply skip
-or fail at run time.
+Before the first `brain deploy --env local`, fill at least:
 
 | Variable | Why |
 |---|---|
-| `VOYAGE_API_KEY` | Needed for the default embedding model (`voyage-3-lite`) so semantic search can run. Optional at deploy — without it, embeddings are skipped. |
+| `VOYAGE_API_KEY` | Required for the default embedding model (`voyage-3-lite`). Deploy fails without an embedding key. |
 | `ANTHROPIC_API_KEY` | Needed if workflows use Anthropic (the default provider). |
 | `OPENAI_API_KEY` | Needed for `openai/…` models, or if `embedding-model` is a `text-embedding-*` model. |
 | `XAI_API_KEY` | Needed for `xai/…` models. |
-| `OPENROUTER_API_KEY` | Needed for `openrouter/…` models (OpenRouter aggregator). |
 
-See **BRA202** and **BRA210** for the full key list. Local Ollama / llama.cpp
-runners use `LOCAL_LLM_N_BASE_URL` instead of a cloud API key — §8.
-
-A local LLM does **not** replace embeddings. Semantic search still needs
-`VOYAGE_API_KEY` or `OPENAI_API_KEY` when you want it; deploy does not require
-either.
+See **BRA202** and **BRA210** for the full key list.
 
 ---
 
@@ -287,121 +273,7 @@ brain deploy --env local --instance local-brain
 
 ---
 
-## 8. Local LLM runners (Ollama / llama.cpp)
-
-Workflows can call a local OpenAI-compatible runner (Ollama, llama.cpp server,
-or similar) instead of Anthropic / OpenAI / xAI. The Brain process still runs
-in Docker, so the runner URL must be reachable **from the container**.
-
-This does not replace embeddings. Semantic search still needs `VOYAGE_API_KEY`
-(or `OPENAI_API_KEY` for a `text-embedding-*` model) when you want it. Deploy
-does not require either key.
-
-### Env vars
-
-Add numbered entries to `.env.local`. The number maps to `local_{N}` in the
-workflow `model` string. Presence of `LOCAL_LLM_N_BASE_URL` is the gate — if
-it is unset, that runner cannot be used.
-
-```env
-# Ollama on the host, Brain in Docker (usual local stack):
-LOCAL_LLM_1_BASE_URL=http://host.docker.internal:11434/v1
-
-# Second runner (optional):
-# LOCAL_LLM_2_BASE_URL=http://host.docker.internal:11435/v1
-
-# Optional API key for a secured local endpoint:
-# LOCAL_LLM_1_API_KEY=your_optional_key_here
-
-# Optional default for workflows that omit `model:` (a workflow `model:` overrides this):
-# DEFAULT_LLM_MODEL=local_1/qwen3:8b
-```
-
-| Variable | Required | Meaning |
-| -------- | -------- | ------- |
-| `LOCAL_LLM_1_BASE_URL` | yes, to use `local_1/…` | OpenAI-compatible base URL for runner 1 |
-| `LOCAL_LLM_N_BASE_URL` | yes, to use `local_N/…` | Same for runner N |
-| `LOCAL_LLM_N_API_KEY` | no | Sent as `Authorization: Bearer` when set. Omitted otherwise (Ollama ignores a placeholder). |
-| `DEFAULT_LLM_MODEL` | no | Optional brain default (`local_1/qwen3:8b`). Same as Settings **Default LLM model**. Used when a workflow omits `model:`. |
-
-A trailing `/v1` is accepted and stripped. The conversant calls
-`{base}/v1/chat/completions`.
-
-Do **not** use `http://localhost:11434` while Brain is in Docker — that is the
-container itself. Use `host.docker.internal` (same rule as §7). `localhost` is
-correct only if the Brain server is running natively on the host.
-
-### When to redeploy
-
-`.env.local` and schema files only reach the brain on `brain deploy`. Pulling
-a new weights file onto an already-wired runner does not.
-
-| Change | Redeploy? |
-| ------ | --------- |
-| Add or change `LOCAL_LLM_N_BASE_URL` / `LOCAL_LLM_N_API_KEY` in `.env.local` | Yes |
-| Set `DEFAULT_LLM_MODEL` in `.env.local` or `llm-model` in `brain-compose.yml` | Yes |
-| Change a workflow YAML `model:` (e.g. to `local_1/qwen3:8b`) | Yes |
-| `ollama pull` / llama.cpp load of a new model on an existing runner URL | No — Settings lists models from `/v1/models` live |
-| **Default LLM model** in Settings | No — saved immediately |
-
-Confirm the runner before deploying:
-
-```bash
-curl http://localhost:11434/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"qwen3:8b","messages":[{"role":"user","content":"ping"}]}'
-```
-
-Then:
-
-```bash
-brain deploy --env local --instance local-brain
-```
-
-Run `brain deploy` from the folder that contains `brain-compose.yml` (or pass
-that path). The repo root of the platform is not a brain folder.
-
-### Workflow model
-
-Point the workflow at the runner and the model id the runner serves:
-
-```yaml
-model: local_1/qwen3:8b
-```
-
-```yaml
-model: local_2/gemma4:e4b
-```
-
-The prefix `local_1` resolves `LOCAL_LLM_1_BASE_URL`. The remainder
-(`qwen3:8b`) is passed verbatim to the runner. Unprefixed model names still
-use Anthropic. Omitting `model` uses the brain default (Settings /
-`DEFAULT_LLM_MODEL` / compose `llm-model`); if that is also unset, the run
-fails — leftover cloud keys are not a silent default. A workflow that sets
-`model:` uses that model when its credential exists, even if a brain default
-is set.
-
-To give every workflow that omits `model:` a local runner, set
-**Default LLM model** in Settings, `DEFAULT_LLM_MODEL` in `.env.local`, or
-`llm-model` in `brain-compose.yml`. Workflows that already set `model:`
-keep that model.
-
-If the run fails with "No LLM model is configured" or "No model credential is
-configured", either no default/`model:` is set, or the workflow is still on
-`anthropic/…` (or another cloud prefix) and that key is missing. Setting
-`LOCAL_LLM_1_BASE_URL` alone does not change existing workflow models.
-
-`CostCents` is null for local-runner runs (no Telos Brain price row). The UI
-shows `—`. Full provider contract: **BRA210**.
-
-`telosbrain/xai/grok-4.6` is **unavailable** on the local stack (no
-platform `Grok:ApiKey`). Use `xai/grok-4.6` with `XAI_API_KEY`, or a
-`local_N/…` runner. On Telos Cloud that aggregator bills brain credit at
-2× the official xAI grok-4.6 API rate (**BRA212**).
-
----
-
-## 9. Local stack behaviour
+## 8. Local stack behaviour
 
 | Topic | What to expect |
 |---|---|
@@ -432,7 +304,7 @@ brain start --image telos-brain:local
 
 ---
 
-## 10. Common pitfalls
+## 9. Common pitfalls
 
 - **Tool call fails with "must resolve to a valid HTTPS URL"** — the
   `url-env` value is missing, blank, or a remote `http://` URL. Local HTTP is
@@ -440,29 +312,12 @@ brain start --image telos-brain:local
 - **Tool call reaches the Brain container, not your app** — the URL used
   `localhost` or `127.0.0.1`. Switch to `http://host.docker.internal:<PORT>`
   and redeploy.
-- **Semantic search is empty / embeddings skipped** — neither
-  `VOYAGE_API_KEY` nor `OPENAI_API_KEY` is set. Deploy still succeeds. Fill a
-  key in `.env.local` if you want embeddings. A local LLM does not replace
-  this key.
-- **`No brain compose file found`** — `brain deploy` was run from a folder
-  without `brain-compose.yml`. Pass the schema path (e.g.
-  `brain deploy brain-schema --env local --instance local-brain`).
-- **Local LLM: "No LLM model is configured"** — no Default LLM model /
-  `DEFAULT_LLM_MODEL` / compose `llm-model`, and the workflow has no `model:`.
-  Set one of those, then redeploy or save Settings.
-- **Local LLM: "No model credential is configured"** — the workflow `model`
-  is still `anthropic/…` (or another cloud prefix), or the default points at a
-  runner whose env var is missing. Set `model: local_1/…` (or a brain default)
-  and `LOCAL_LLM_1_BASE_URL`, then redeploy. A failed inbox task cannot be
-  retried; create a new task or entry.
-- **Local LLM connection refused** — `LOCAL_LLM_1_BASE_URL` used `localhost`
-  from Brain-in-Docker, or the runner is not listening. Use
-  `http://host.docker.internal:11434/v1` (§8).
+- **Deploy fails on embeddings** — `VOYAGE_API_KEY` (or `OPENAI_API_KEY` for
+  an OpenAI embedding model) is blank. Fill it in `.env.local`.
 - **Port already allocated** — change `api_port` / `sql_port` in
   `brain.config.toml`, or pass `--port`, then `brain start` again.
-- **`brain init` fails** — GitHub HTTPS auth is not set up for the private
-  starter repo (try `gh auth login`). Override with `--template <url>` if
-  you have another remote.
+- **`brain init` fails** — GitHub SSH is not set up for the private starter
+  repo. Override with `--template <url>` if you have another remote.
 - **`--reset` wipes data** — the local SQL volume is deleted. Use it when you
   want a clean database, not for a routine stop.
 
@@ -472,7 +327,7 @@ brain start --image telos-brain:local
 
 - **BRA104** — guided interview to configure a new schema after `brain init`
 - **BRA211** — auto-build a schema from an existing application
-- **BRA201** — schema overview; **BRA213–BRA217** for file formats
+- **BRA201** — brain schema file format
 - **BRA202** — `.env` upload, system keys, secret injection
 - **BRA209** — connectors, `url` vs `url-env`
 - **BRA210** — LLM providers and model codes

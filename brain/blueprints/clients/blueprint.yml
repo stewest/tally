@@ -1,7 +1,6 @@
 name: Client
-scope:
-  type: entity
-  code: clients
+version: 1
+scope: entity:clients
 categories:
   - name: Client Context
     description: Specific context, preferences and history for this client

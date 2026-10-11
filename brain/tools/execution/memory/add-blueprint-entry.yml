@@ -1,10 +1,6 @@
 name: add_blueprint_entry
 version: 1
-description: >-
-  Adds a new entry to this brain's memory blueprint under an existing category.
-  Use to record a distilled, reusable insight. Fails if an entry with the same
-  title already exists. The target blueprint is resolved automatically from the
-  run's context; you never choose it.
+description: Adds a new entry to this brain's memory blueprint under an existing category. Use to record a distilled, reusable insight. Fails if an entry with the same title already exists. The target blueprint is resolved automatically from the run's context; you never choose it.
 system:
   tool: add_blueprint_entry
 parameters:

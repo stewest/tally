@@ -1,51 +1,57 @@
 name: upsert_budget
 version: 1
-description: >-
-  Creates or updates a category budget. Unique on organisation, category,
-  period and startsOn.
+description: Creates or updates a category budget. Unique on organisation, category, period and startsOn.
 api:
   method: POST
   path: /api/tools/upsertBudget
   connector: my-app
 parameters:
   - name: authorization
-    description: Host tool API key, injected as the Authorization bearer token.
     header: Authorization
+    description: Host tool API key, injected as the Authorization bearer token.
     secret: MY_APP_API_KEY
-    value: "Bearer {secret}"
+    value: Bearer {secret}
   - name: brainAuthorization
-    description: Brain handshake key, injected as X-Brain-Authorization.
     header: X-Brain-Authorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
     secret: BRAIN_API_KEY
-    value: "Bearer {secret}"
+    value: Bearer {secret}
   - name: organisationId
+    param: organisationId
     description: Organisation scope, injected from the current entity.
     entity: organisationId
   - name: category
+    param: category
     description: Spending category this budget applies to, e.g. Groceries.
     type: string
     required: true
   - name: period
+    param: period
     description: Budget period — weekly, fortnightly, monthly, quarterly or yearly.
     type: string
     required: true
   - name: amount
+    param: amount
     description: Budget limit as a positive number.
     type: decimal
     required: true
   - name: startsOn
+    param: startsOn
     description: Period start date (YYYY-MM-DD).
     type: date
     required: true
   - name: endsOn
+    param: endsOn
     description: Optional end date (YYYY-MM-DD) after which the budget no longer applies.
     type: date
     required: false
   - name: notes
+    param: notes
     description: Optional notes about the budget.
     type: string
     required: false
   - name: currency
+    param: currency
     description: Optional ISO currency code. Defaults to NZD.
     type: string
     required: false

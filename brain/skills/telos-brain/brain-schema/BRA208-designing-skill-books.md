@@ -2,11 +2,7 @@
 name: Designing Skill Books
 code: BRA208
 version: 3
-description: How to design a Skill Book's category structure and skill number
-  ranges so the AI can place knowledge correctly. Use when creating a new
-  skillbook, proposing or reviewing categories, writing category descriptions,
-  choosing category indexes (100, 200, 300…), or assigning skill codes within a
-  range.
+description: How to design a Skill Book's category structure and skill number ranges so the AI can place knowledge correctly. Use when creating a new skillbook, proposing or reviewing categories, writing category descriptions, choosing category indexes (100, 200, 300…), or assigning skill codes within a range.
 ---
 
 # Designing Skill Books
@@ -21,7 +17,7 @@ is one of the most important steps in setting up a Skill Book.
 
 This skill covers **how to design** that structure. For what a Skill Book is and
 how agents work with skills, see **BRA103**. For the YAML file format and deploy
-rules, see **BRA215**.
+rules, see **BRA201** §6.
 
 ---
 
@@ -228,7 +224,7 @@ numbers randomly.
 ## 6. Encode in the schema
 
 Once the structure is agreed, encode it in `skills/<book>/skillbook.yml`
-(BRA215):
+(BRA201 §6.1):
 
 ```yaml
 name: Engineering Practices

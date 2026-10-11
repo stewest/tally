@@ -1,12 +1,8 @@
 ---
-name: "Workflow run variables & pre-called input-tools"
+name: Workflow run variables & pre-called input-tools
 code: BRA409
-version: 3
-description: How harness apps pass string variables into a workflow run via the
-  Execution API, how those values surface as {{input.*}} template tags, and how
-  workflows declare input-tools to call tools automatically at startup using
-  those variables. Companion to BRA403 (run endpoints), BRA204 (input scope),
-  and BRA217 (YAML schema).
+version: 1
+description: How harness apps pass string variables into a workflow run via the Execution API, how those values surface as {{input.*}} template tags, and how workflows declare input-tools to call tools automatically at startup using those variables. Companion to BRA403 (run endpoints), BRA204 (input scope), and BRA201 §8.0a (YAML schema).
 ---
 
 # Workflow run variables & pre-called input-tools
@@ -20,7 +16,7 @@ from outside the brain schema:
    with parameters filled from those same `{{input.*}}` tags.
 
 See **BRA403** for the full run-endpoint contract, **BRA204** §3.6 for the
-`input` scope taxonomy, and **BRA217** for the YAML field reference.
+`input` scope taxonomy, and **BRA201** §8.0a for the YAML field reference.
 
 ---
 
@@ -104,10 +100,8 @@ Content-Type: application/json
 }
 ```
 
-On the async path the same `variables` object is stored on the run before
-execution starts — pass them on the request body only. `callbackUrl` is not a
-variable: when the run finishes, the engine POSTs the result JSON to that URL
-(see **BRA403**).
+Async jobs read variables from the persisted `WorkflowRun` row — you do not need
+to put them on the Hangfire payload yourself.
 
 ---
 
@@ -158,14 +152,14 @@ input-tools:
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `variable` | yes | Injection name — becomes the `name` attribute on the result block |
-| `tool` | yes | Declared tool name or system tool name |
+| `tool` | yes | Tool Router name (`Tools.Name` or system tool name) |
 | `parameters` | no | String map; values may include `{{…}}` tags (including `{{input.*}}`) |
 
 ### Runtime sequence
 
 1. API `variables` are loaded into the template `input` scope.
 2. Each `input-tools` entry runs in declaration order.
-3. Parameter values are template-rendered, then the named tool is called.
+3. Parameter values are template-rendered, then dispatched via `IToolRouter`.
 4. Results are injected as a user-role context message **before** the first
    Claude turn:
 
@@ -233,6 +227,6 @@ curl -sS -X POST "$TELOS_API_URL/workflows/WF-INPUT-VARIABLES/run/sync" \
 | --- | --- |
 | **BRA403** | Run endpoints; `variables` on the shared request body |
 | **BRA204** §3.6 | `input` scope taxonomy (API variables + tool params) |
-| **BRA217** | YAML `input-tools` schema reference |
+| **BRA201** §8.0a | YAML `input-tools` schema reference |
 | `WF-INPUT-VARIABLES` | Live example workflow in `workflows/` |
 | `WF-ASK-QUESTION` | Child workflow used by the `ask_question` tool (`{{input.question}}`) |

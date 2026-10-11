@@ -1,60 +1,41 @@
 ---
 name: Chat
 code: WF-CHAT
-description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
-version: 5
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
-model: anthropic/claude-sonnet-4-6
-
-# RUNNABLE: this workflow is executed manually / interactively as a chat.
 type: RUNNABLE
-
-# First cap must fit a large record_transactions payload. thinking-budget is
-# headroom on top of output-tokens so adaptive thinking cannot eat the reply.
-output-tokens: 8192, 16384
+version: 5
+description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
+model: anthropic/claude-sonnet-4-6
+system-prompt-code: WF-SYSTEM-PROMPT
+output-tokens: "8192,16384"
 caching: automatic
 max-turns: 50
 thinking: adaptive
 thinking-budget: 16384
 thinking-effort: low
-
-# Reuse the shared persona/tone/constraints as the system prompt.
-system-prompt-code: WF-SYSTEM-PROMPT
-
-# Injected tools available every turn.
 tools:
-  - web_search
-  - web_fetch
-  - find_available_skills
-  - get_skill
-  - search_blueprint_entries
-  - get_blueprint_entry
   - ask_question
-  - record_transactions
-  - list_transactions
-  - update_transaction
-  - list_budgets
-  - upsert_budget
+  - find_available_skills
+  - get_blueprint_entry
+  - get_skill
   - get_spend_summary
-
-# Management / maintenance tools kept in the searchable pool for on-demand use.
-# compact_context triggers context compaction (BRA263) via WF-COMPACT on any
-# provider; auto-compaction on Claude remains server-side when configured.
-available-tools:
-  - find_available_tools
-  - compact_context
-  - transcribe_image
-  - web_search
+  - list_budgets
+  - list_transactions
+  - record_transactions
+  - search_blueprint_entries
+  - update_transaction
+  - upsert_budget
   - web_fetch
-  - list_blueprint_entries
+  - web_search
+available-tools:
   - add_blueprint_entry
-  - update_blueprint_entry
+  - compact_context
+  - find_available_tools
+  - get_schema_file
+  - list_blueprint_entries
   - list_schema_files
   - search_schema_files
-  - get_schema_file
+  - update_blueprint_entry
   - update_schema_file
-
 available-skills:
   - BRA101
   - BRA201
@@ -77,9 +58,21 @@ answers.
 4. When you need current or external information, use `web_search` to find
    sources and `web_fetch` to read a specific page.
 5. When the user pastes bank statement text or a `bank-statement` fenced
-   block, load skill `BUS301` and persist the rows with `record_transactions`.
-   Do not reason through every row in thinking — parse, call the tool, then
-   confirm inserted vs skipped counts. Do not invent transactions.
+   block, load skill `BUS301` then follow this multi-account import protocol:
+   a. **Plan upfront.** Before importing any rows, identify every distinct
+      account present in the paste and state the full list (e.g. "Accounts to
+      import: Current Account, General Savings, Car Savings"). Do not start any
+      `record_transactions` call until the plan is declared.
+   b. **Import in parallel where possible.** When batches are independent —
+      different accounts, or non-overlapping date ranges within one account —
+      issue them as simultaneous `record_transactions` calls in the same turn
+      rather than one at a time. This reduces turn count and wall-clock time.
+   c. **Checkpoint each account.** After all batches for one account complete,
+      record its result (inserted/skipped counts) before moving to the next
+      account. This makes partial progress visible if the run fails mid-way.
+   d. Do not reason through every row in thinking — parse silently, call the
+      tool, then confirm per-account inserted/skipped counts. Do not invent
+      transactions.
 6. When the user asks about spend, budgets, or categorisation, use
    `list_transactions`, `get_spend_summary`, `list_budgets` and
    `upsert_budget` rather than guessing.

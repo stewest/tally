@@ -1,35 +1,21 @@
 ---
 name: Review Blueprint
 code: WF-REVIEW-BLUEPRINT
-description: >-
-  Applies one blueprint memory write from a review_blueprint inbox task —
-  searches for a close match, then either merges into an existing entry or
-  creates a new one. Never both.
-version: 5
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
-model: anthropic/claude-sonnet-4-6
-
-# Tasks are created by WF-REVIEW-UOW / WF-TRIAGE via add_inbox_task with
-# workflow_code WF-REVIEW-BLUEPRINT. An inbox: trigger with :low enables
-# Hangfire stage-2 auto-run when brain learning-mode is low or higher (BRA404).
-# Routing segment is ignored at stage 2; MEMORY_UPDATE matches stage-1 entries
-# that arrive already classified as memory learnings.
 type: TRIGGERED
-trigger: inbox:MEMORY_UPDATE:low
-
+version: 3
+description: Applies one blueprint memory write from a review_blueprint inbox task — searches for a close match, then either merges into an existing entry or creates a new one. Never both.
+model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
-
-output-tokens: 4096, 8192
+trigger: inbox:MEMORY_UPDATE:low
+output-tokens: "4096,8192"
 caching: automatic
 max-turns: 15
 thinking: effort
 max-runs-per-hour: 500
-
 tools:
-  - search_blueprint_entries
-  - get_blueprint_entry
   - add_blueprint_entry
+  - get_blueprint_entry
+  - search_blueprint_entries
   - update_blueprint_entry
 ---
 
@@ -40,22 +26,7 @@ Fully autonomous — do not ask questions or wait for confirmation. Do **not**
 update the inbox entry status.
 
 Blueprint scope (entity vs brain-global) is resolved automatically from the run
-context — never pass scope to tools. Match the parsed category to one listed
-below.
-
-## Blueprints
-
-<blueprint_categories>
-{{#blueprints}}
-### {{blueprint.name}}
-{{blueprint.description}}
-
-{{#blueprint.categories}}
-- **{{category.name}}** — {{category.description}}
-{{/blueprint.categories}}
-
-{{/blueprints}}
-</blueprint_categories>
+context — never pass scope to tools.
 
 ## This task
 

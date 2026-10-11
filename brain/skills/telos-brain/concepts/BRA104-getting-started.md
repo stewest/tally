@@ -1,12 +1,8 @@
 ---
 name: Getting Started
 code: BRA104
-version: 8
-description: Interactive onboarding interview to configure a brain schema from
-  scratch — entity type, unit of work type, blueprint categories, and skill
-  categories. Use after brain init, before the first deploy. If the host
-  application already exists, use BRA211 (auto-build) instead. For running the
-  local Docker stack, use BRA106.
+version: 6
+description: Interactive onboarding interview to configure a brain schema from scratch — entity type, unit of work type, blueprint categories, and skill categories. Use after brain init, before the first deploy. If the host application already exists, use BRA211 (auto-build) instead. For running the local Docker stack, use BRA106.
 ---
 
 # Getting Started
@@ -27,8 +23,8 @@ the user, stop and load **BRA211** (auto-build) instead.
 **Background (do not re-explain — load if needed):**
 
 - **BRA106** — local Docker stack (`brain start` / deploy / host.docker.internal)
-- **BRA201** — schema overview (layout, deploy, versioning; links to file-type skills)
-- **BRA213** — `brain-compose.yml` (entities, units of work, variables)
+- **BRA201** — brain schema structure (`brain-compose.yml`, entities, units of
+  work, blueprints, skillbooks)
 - **BRA210** — LLM providers and example `model` codes for workflows
   (`anthropic/…`, `openai/…`, `xai/…`)
 - **BRA208** — skill-book category design and numeric ranges
@@ -37,8 +33,7 @@ the user, stop and load **BRA211** (auto-build) instead.
 After the brain is deployed and in use, point the user at the **Run** skills
 (**BRA401** onwards) for the Execute API, entities/units of work at runtime,
 inbox, run variables / `input-tools` (**BRA409**), file transcription
-(**BRA410**), the `transcribe_image` system tool (**BRA412**), and related
-operations.
+(**BRA410**), and related operations.
 
 ---
 
@@ -98,7 +93,7 @@ Record: `name`, `code`, `description`, `scope: entity:<entity-code>`.
 > generic learnings; specific, well-described categories produce useful
 > memory.** Take a moment to tailor them to how this business actually thinks.
 
-Then pause and propose the starter defaults (from the starter brain):
+Then pause and propose the starter defaults (from the starter brain / BRA161):
 
 **Company blueprint** (brain-scoped — shared across all entities):
 

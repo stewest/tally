@@ -1,13 +1,9 @@
 ---
 name: System Prompt
 code: WF-SYSTEM-PROMPT
-description: Reusable system prompt holding persona, tone and operating constraints shared across workflows.
-version: 1
-
-# This workflow is never executed directly — it is referenced by other workflows
-# via `system-prompt-code`, so it has no model. SYSTEM marks it as a prompt-only
-# workflow that supplies a system prompt rather than being invoked.
 type: SYSTEM
+version: 1
+description: Reusable system prompt holding persona, tone and operating constraints shared across workflows.
 ---
 
 # Persona

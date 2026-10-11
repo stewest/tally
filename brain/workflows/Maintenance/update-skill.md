@@ -1,46 +1,28 @@
 ---
 name: Update Skill
 code: WF-UPDATE-SKILL
-description: >-
-  Autonomously extracts transferable skill knowledge from an inbox entry and
-  creates or updates skills (and rarely categories) via schema tools. Source
-  material comes from {{inboxEntry.body}}; skill book structure is injected.
-version: 13
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
-model: anthropic/claude-sonnet-4-6
-
-# Tasks are usually created by WF-TRIAGE (add_inbox_task). :high:5 gates
-# both stages (BRA404): Stage 1 creates a task only when learning-mode >=
-# high AND weight >= 5; Stage 2 auto-runs when those same gates pass
-# against the parent entry's current Weight (routing ignored). Below
-# weight 5, triage-created tasks park at AWAITING_APPROVAL for manual
-# processing. Keep SKILL_UPDATE (not inbox:*) so Stage 1 does not attach
-# this workflow to every high-weight entry.
 type: TRIGGERED
-trigger: inbox:SKILL_UPDATE:high:5
-
+version: 10
+description: Autonomously extracts transferable skill knowledge from an inbox entry and creates or updates skills (and rarely categories) via schema tools. Source material comes from {{inboxEntry.body}}; skill book structure is injected.
+model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-BRAIN-SYSTEM
-
-output-tokens: 4096, 8192, 16384
+trigger: inbox:SKILL_UPDATE:high
+auto-compaction: 100000
+output-tokens: "4096,8192,16384"
 caching: automatic
 max-turns: 40
 thinking: adaptive
-auto-compaction: 100000
 max-runs-per-hour: 200
-
 tools:
+  - create_skill
   - find_available_skills
+  - get_schema_file
   - get_skill
   - list_schema_files
   - search_schema_files
-  - get_schema_file
   - update_schema_file
-  - create_skill
-
 injected-skills:
   - BRA105
-
 available-skills:
   - BRA103
   - BRA201

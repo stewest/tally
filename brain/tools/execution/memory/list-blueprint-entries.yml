@@ -1,9 +1,6 @@
 name: list_blueprint_entries
 version: 1
-description: >-
-  Lists the entries in this brain's memory blueprint for the current context,
-  optionally filtered by category. Returns CSV with columns Title,Category,
-  UpdatedAt. Use get_blueprint_entry to read an entry's full content.
+description: Lists the entries in this brain's memory blueprint for the current context, optionally filtered by category. Returns CSV with columns Title,Category, UpdatedAt. Use get_blueprint_entry to read an entry's full content.
 system:
   tool: list_blueprint_entries
 parameters:

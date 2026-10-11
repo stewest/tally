@@ -1,13 +1,11 @@
 name: Finance
-description: >-
-  Host-app tools for recording transactions, listing spend, and managing
-  category budgets via the my-app connector.
+description: Host-app tools for recording transactions, listing spend, and managing category budgets via the my-app connector.
 tools:
-  - record-transactions.yml
-  - list-transactions.yml
-  - update-transaction.yml
-  - list-budgets.yml
-  - upsert-budget.yml
-  - get-spend-summary.yml
-  - upsert-insight.yml
   - create-insight.yml
+  - get-spend-summary.yml
+  - list-budgets.yml
+  - list-transactions.yml
+  - record-transactions.yml
+  - update-transaction.yml
+  - upsert-budget.yml
+  - upsert-insight.yml

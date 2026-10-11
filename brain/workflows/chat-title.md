@@ -1,13 +1,11 @@
 ---
 name: Chat title
 code: WF-CHAT-TITLE
-description: Writes a short session title from the user's first chat message.
-version: 1
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
-model: anthropic/claude-haiku-4-5
 type: RUNNABLE
-output-tokens: 64
+version: 1
+description: Writes a short session title from the user's first chat message.
+model: anthropic/claude-haiku-4-5
+output-tokens: "64"
 caching: none
 max-turns: 1
 thinking: none

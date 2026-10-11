@@ -1,10 +1,9 @@
 name: Schema
-description: >-
-  Management tools for listing, reading and editing this brain's own
-  configuration-as-code schema files. Create tools live in the Brain schema
-  group (create_skill, create_schema_file).
+description: Management tools for reading and editing this brain's own configuration-as-code schema files (skills, workflows, tools and blueprint entries).
 tools:
+  - create-schema-file.yml
+  - create-skill.yml
+  - get-schema-file.yml
   - list-schema-files.yml
   - search-schema-files.yml
-  - get-schema-file.yml
   - update-schema-file.yml

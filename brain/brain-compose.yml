@@ -1,120 +1,77 @@
 name: Starter Brain
-description: >-
-  A clean starter brain schema with the Telos Brain skillbook, execution tools
-  (skills, memory, Q&A, inbox, organisation, unit of work, brain schema) and
-  management tools (schema list/read/edit).
-
-# Embedding model for semantic search (find_available_skills, blueprint search).
-# The API key comes from this brain's own .env (VOYAGE_API_KEY for voyage-*).
+description: A clean starter brain schema with the Telos Brain skillbook, execution tools (skills, memory, Q&A) and management tools (schema maintenance).
 embedding-model: voyage-3-lite
-
-# Learning loop intensity. high enables auto-run of inbox workflows whose
-# triggers declare a :high (or lower) learning-mode qualifier (BRA122 / BRA404).
-# Apply workflows also require inbox weight 5 (`inbox:…:high:5`).
-learning-mode: high
-
-# Optional default LLM (provider/model). When set and the matching credential
-# exists, every live run uses this model instead of the workflow frontmatter.
-# Same role as Settings "Default LLM model" and DEFAULT_LLM_MODEL in .env.
-# Omit (and leave DEFAULT_LLM_MODEL blank) to use each workflow's own model.
-# If that is also omitted, the run fails — leftover cloud keys are not used as
-# a silent default. Simulation modelOverride (this run only) still wins; older
-# clients may send settingsOverride.model instead. A missing credential for
-# this value falls back to the workflow model.
-# Compose llm-model wins over DEFAULT_LLM_MODEL at deploy time, so leave this
-# commented if you want Settings / .env to be the switch.
-# llm-model: anthropic/claude-sonnet-4-6
-# Telos Cloud only (2× xAI list on brain credit). Unavailable on local Docker.
-# llm-model: telosbrain/xai/grok-4.6
-# llm-model: openrouter/anthropic/claude-sonnet-4.6
-# llm-model: openrouter/auto
-# llm-model: azure/gpt-4o-prod
-# llm-model: local_1/qwen3:8b
-
-# Checkpoints: weekly schedule plus a snapshot before each deploy.
-checkpoint-strategy: Daily,BeforeDeploy
-
-# Shared outbound host allowlist for async run callbacks and declared-tool
-# webhooks (BRA201 §4.3). Defaults cover local harnesses: Brain-in-Docker
-# reaches the host app via host.docker.internal (BRA106). Add production
-# harness hosts here before deploying tools against them.
+learning-mode: low
+llm-model: anthropic/claude-haiku-5-5
+checkpoint-strategy:
+  - Daily
+  - BeforeDeploy
 allowed-callback-domains:
   - host.docker.internal
   - localhost
   - 127.0.0.1
+  - tally-stewwest.vercel.app
 
-# Entities: top-level things the brain reasons about (multi-tenancy anchor).
 entities:
-  - code: organisation
-    name: Organisation
-    description: The host application organisation this brain is scoped to
-  - code: clients
-    name: Clients
+  - name: Clients
+    code: clients
     description: A client of the business
+  - name: Organisation
+    code: organisation
+    description: The host application organisation this brain is scoped to
 
-# Units of work: scoped pieces of work that trigger learning on completion.
 unitsofwork:
-  - code: jobs
-    name: Jobs
-    scope: entity:clients
-  - code: insight
-    name: Insight
+  - name: Insight
+    code: insight
     scope: entity:organisation
     variables:
       - key: insightId
         description: Host-app insight row this job is filling.
+  - name: Jobs
+    code: jobs
+    scope: entity:clients
 
-# Connectors are named integrations with external services (REST/MCP). Each file
-# under connectors/ declares URL, auth type, scope and required auth parameters.
-# Secret values are not stored here — they go in .env / BrainEnvironmentVariables
-# (BRA202 / BRA209). Unlisted connector files are not deployed.
-connectors:
-  - connectors/my-app.yml
-
-# Tools are split into execution (runtime) and management (brain maintenance).
-# Unlisted tool-group manifests are not deployed. Tool names must be unique
-# across groups.
 tools:
-  - tools/execution/skills/tools.yml
-  - tools/execution/memory/tools.yml
-  - tools/execution/qa/tools.yml
-  - tools/execution/native/tools.yml
-  - tools/execution/inbox/tools.yml
-  - tools/execution/organisation/tools.yml
-  - tools/execution/uow/tools.yml
-  - tools/execution/simulation/tools.yml
-  - tools/execution/brain-schema/tools.yml
-  - tools/execution/my-app/tools.yml
   - tools/execution/finance/tools.yml
+  - tools/execution/inbox/tools.yml
+  - tools/execution/memory/tools.yml
+  - tools/execution/my-app/tools.yml
+  - tools/execution/native/tools.yml
+  - tools/execution/qa/tools.yml
   - tools/management/schema/tools.yml
+  - tools/execution/simulation/tools.yml
+  - tools/execution/skills/tools.yml
 
 skills:
   - skills/telos-brain/skillbook.yml
   - skills/business/skillbook.yml
 
 blueprints:
-  - blueprints/memory/blueprint.yml
-  - blueprints/company/blueprint.yml
   - blueprints/clients/blueprint.yml
+  - blueprints/company/blueprint.yml
+  - blueprints/memory/blueprint.yml
   - blueprints/personal-finance/blueprint.yml
 
 workflows:
-  - workflows/system-prompt.md
+  - workflows/ask-question.md
+  - workflows/Maintenance/brain-system.md
   - workflows/chat.md
   - workflows/chat-title.md
-  - workflows/finance-review.md
-  - workflows/finance-insight.md
-  - workflows/finance-daily.md
-  - workflows/ask-question.md
-  - workflows/create-frame-of-reference.md
-  - workflows/review-unit-of-work.md
-  - workflows/review-blueprint.md
-  - workflows/research.md
-  - workflows/eval.md
-  - workflows/wf-sim.md
   - workflows/wf-compact.md
-  - workflows/Maintenance/brain-system.md
+  - workflows/eval.md
+  - workflows/finance-daily.md
+  - workflows/finance-insight.md
+  - workflows/finance-review.md
+  - workflows/create-frame-of-reference.md
+  - workflows/research.md
+  - workflows/review-blueprint.md
+  - workflows/review-unit-of-work.md
+  - workflows/wf-sim.md
+  - workflows/system-prompt.md
   - workflows/Maintenance/triage.md
+  - workflows/Maintenance/update-brain.md
   - workflows/Maintenance/update-skill.md
   - workflows/Maintenance/update-workflow.md
-  - workflows/Maintenance/update-brain.md
+
+connectors:
+  - connectors/my-app.yml

@@ -1,8 +1,8 @@
 ---
 name: Importing Bank Transactions
 code: BUS301
-version: 3
-description: How to parse pasted bank statement text and persist it with finance host tools.
+version: 6
+description: How to import bank statements — parsing pasted or uploaded text, sequencing multi-account imports, applying batch limits, and persisting transactions with finance host tools.
 tools:
   - record_transactions
   - list_transactions
@@ -19,7 +19,7 @@ to import transactions.
 
 ## Process
 
-1. Load `Category Taxonomy` and `Statement Parsing Rules` from memory
+1. Load `Category Taxonomy`, `Statement Parsing Rules`, and `Account Type Rules` from memory
    (`search_blueprint_entries` then `get_blueprint_entry`).
 2. Parse every line that has a date and an amount. Skip headers and balances.
 3. Map each row to `{ occurredAt, description, amount, merchant?, category?, account? }`.
@@ -35,6 +35,22 @@ to import transactions.
    `Other`.
 7. If the user asks how they are tracking, follow up with `get_spend_summary`
    or `list_transactions`.
+
+## Multi-account imports
+
+When a statement covers more than one account:
+
+1. Identify every account label in the paste before processing any rows.
+2. Consult `Account Type Rules` (loaded in step 1 above) to determine which
+   accounts to import and which to exclude — for example, savings or investment
+   accounts may follow different conventions or be excluded entirely.
+3. Process each included account in sequence. Do not combine rows from different
+   accounts into a single `record_transactions` call — keep the `account` field
+   accurate per row.
+4. Track which accounts have been processed. Do not summarise until every
+   included account is complete.
+5. Report per-account totals in the final summary so the user can confirm every
+   account was handled.
 
 ## Rules
 

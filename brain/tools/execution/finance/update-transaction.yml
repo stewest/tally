@@ -1,55 +1,62 @@
 name: update_transaction
 version: 1
-description: >-
-  Updates a single persisted transaction — typically to correct category,
-  merchant, or amount after import.
+description: Updates a single persisted transaction — typically to correct category, merchant, or amount after import.
 api:
   method: POST
   path: /api/tools/updateTransaction
   connector: my-app
 parameters:
   - name: authorization
-    description: Host tool API key, injected as the Authorization bearer token.
     header: Authorization
+    description: Host tool API key, injected as the Authorization bearer token.
     secret: MY_APP_API_KEY
-    value: "Bearer {secret}"
+    value: Bearer {secret}
   - name: brainAuthorization
-    description: Brain handshake key, injected as X-Brain-Authorization.
     header: X-Brain-Authorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
     secret: BRAIN_API_KEY
-    value: "Bearer {secret}"
+    value: Bearer {secret}
   - name: organisationId
+    param: organisationId
     description: Organisation scope, injected from the current entity.
     entity: organisationId
   - name: transactionId
+    param: transactionId
     description: The transaction UUID to update.
     type: string
     required: true
   - name: occurredAt
+    param: occurredAt
     description: Optional replacement date (YYYY-MM-DD).
     type: date
     required: false
   - name: description
+    param: description
     description: Optional replacement description.
     type: string
     required: false
   - name: amount
+    param: amount
     description: Optional replacement signed amount.
     type: decimal
     required: false
   - name: merchant
+    param: merchant
     description: Optional replacement merchant.
     type: string
     required: false
   - name: category
+    param: category
     description: Optional replacement category.
     type: string
     required: false
   - name: account
+    param: account
     description: Optional replacement account.
     type: string
     required: false
   - name: notes
+    param: notes
     description: Optional replacement notes.
     type: string
     required: false

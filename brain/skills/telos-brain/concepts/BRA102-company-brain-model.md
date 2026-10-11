@@ -2,9 +2,7 @@
 name: Company Brain Model
 code: BRA102
 version: 1
-description: The foundational model of what a company brain is — its DNA genome,
-  the brain-vs-database distinction, and the three learning loops that keep it
-  alive and compounding.
+description: The foundational model of what a company brain is — its DNA genome, the brain-vs-database distinction, and the three learning loops that keep it alive and compounding.
 ---
 
 # Company Brain Model

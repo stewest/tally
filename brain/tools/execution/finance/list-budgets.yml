@@ -7,15 +7,16 @@ api:
   connector: my-app
 parameters:
   - name: authorization
-    description: Host tool API key, injected as the Authorization bearer token.
     header: Authorization
+    description: Host tool API key, injected as the Authorization bearer token.
     secret: MY_APP_API_KEY
-    value: "Bearer {secret}"
+    value: Bearer {secret}
   - name: brainAuthorization
-    description: Brain handshake key, injected as X-Brain-Authorization.
     header: X-Brain-Authorization
+    description: Brain handshake key, injected as X-Brain-Authorization.
     secret: BRAIN_API_KEY
-    value: "Bearer {secret}"
+    value: Bearer {secret}
   - name: organisationId
+    param: organisationId
     description: Organisation scope, injected from the current entity.
     entity: organisationId

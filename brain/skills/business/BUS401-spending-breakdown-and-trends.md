@@ -2,9 +2,7 @@
 name: Spending Breakdown and Trends
 code: BUS401
 version: 1
-description: >-
-  Turn transaction totals into spending-mix, month-on-month shift, and
-  recurring-bill findings for insight cards and finance reviews.
+description: Turn transaction totals into spending-mix, month-on-month shift, and recurring-bill findings for insight cards and finance reviews.
 tools:
   - get_spend_summary
   - list_transactions

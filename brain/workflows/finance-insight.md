@@ -1,31 +1,23 @@
 ---
 name: Finance Insight
 code: WF-FINANCE-INSIGHT
-description: >-
-  Produces one short, actionable personal-finance insight card for a requested
-  category from the organisation's transactions, then writes it back to the app.
-version: 1
 type: RUNNABLE
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+version: 2
+description: Produces one short, actionable personal-finance insight card for a requested category from the organisation's transactions, then writes it back to the app.
 model: anthropic/claude-sonnet-4-6
-
 system-prompt-code: WF-SYSTEM-PROMPT
-
-output-tokens: 4096, 8192
+output-tokens: "4096,8192"
 max-turns: 20
 thinking: adaptive
-
 tools:
-  - list_transactions
+  - find_available_skills
+  - get_blueprint_entry
+  - get_skill
   - get_spend_summary
   - list_budgets
-  - upsert_insight
+  - list_transactions
   - search_blueprint_entries
-  - get_blueprint_entry
-  - find_available_skills
-  - get_skill
-
+  - upsert_insight
 available-skills:
   - BUS401
   - BUS402
@@ -55,10 +47,11 @@ Category codes and their meaning:
 
 1. If the category is `spending_trends`, `budget_alerts`, or `anomalies`,
    call `get_skill` for the matching skill above and follow it.
-2. Call `get_spend_summary` for the current period (omit dates unless the user
-   named a range).
-3. Call `list_transactions` for the same range. Call `list_budgets` if the
-   category is `budgeting_spending` or `budget_alerts`.
+2. Call `get_spend_summary` for the current week (Monday to today).
+3. Call `list_transactions` for the current week. Call `list_budgets` if the
+   category is `budgeting_spending` or `budget_alerts`. Do not look back over
+   all transactions — keep the scope to this week unless the category is
+   `spending_trends` (trend analysis may use a broader window).
 4. Write **3 to 5** short, actionable tips in British English for that category
    only. Ground every tip in the returned spend, merchants, categories, or
    budgets. If the data is thin, give conservative, category-appropriate advice

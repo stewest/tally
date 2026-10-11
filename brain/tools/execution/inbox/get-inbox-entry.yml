@@ -1,17 +1,11 @@
 name: get_inbox_entry
-version: 2
-description: >-
-  Retrieves a single inbox entry by its reference, including WorkflowName,
-  EntityName, UnitOfWorkName, Weight, Cluster (8-character reference), the full
-  markdown body, and all associated tasks. Use after list_inbox_entries to
-  read an entry in full.
+version: 1
+description: Returns the full inbox entry (scalars, body, and tasks) for an 8-character reference. Prefer {{inboxEntry.*}} when the entry is already in workflow context.
 system:
   tool: get_inbox_entry
 parameters:
   - name: inbox_entry_reference
     param: inbox_entry_reference
-    description: >-
-      Required. The 8-character lowercase alphanumeric reference of the inbox
-      entry to retrieve.
+    description: Required. The 8-character inbox entry reference. Never pass a UUID.
     type: string
     required: true

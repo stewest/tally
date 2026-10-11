@@ -1,37 +1,28 @@
 ---
 name: Finance Review
 code: WF-FINANCE-REVIEW
-description: >-
-  Reviews organisation spend against budgets for a given period, flags
-  uncategorised transactions, and records reusable insights.
-version: 1
 type: RUNNABLE
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+version: 1
+description: Reviews organisation spend against budgets for a given period, flags uncategorised transactions, and records reusable insights.
 model: anthropic/claude-sonnet-4-6
-
 system-prompt-code: WF-SYSTEM-PROMPT
-
-output-tokens: 4096, 8192
+output-tokens: "4096,8192"
 max-turns: 30
 thinking: adaptive
-
 tools:
-  - list_transactions
-  - list_budgets
+  - find_available_skills
+  - get_blueprint_entry
+  - get_skill
   - get_spend_summary
+  - list_budgets
+  - list_transactions
+  - search_blueprint_entries
   - update_transaction
   - upsert_budget
-  - search_blueprint_entries
-  - get_blueprint_entry
-  - find_available_skills
-  - get_skill
-
 available-tools:
   - add_blueprint_entry
   - list_blueprint_entries
   - record_transactions
-
 available-skills:
   - BUS301
   - BUS401
