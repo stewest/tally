@@ -1,14 +1,15 @@
 ---
 name: "Execution API: Workflow Execution & Telemetry"
 code: BRA403
-version: 22
+version: 24
 description: How to list a brain's workflows (with pending inbox-task counts),
   run them synchronously (SSE streaming) or asynchronously (fire-and-forget
   with callback), pass optional run variables for {{input.*}} template tags
   and pre-called input-tools (BRA409), hold a multi-turn chat session against
   a single run, stop an in-flight turn without closing the session
   (POST /runs/{id}/stop), and retrieve run telemetry and unit-of-work telemetry
-  via the Execution API — including model, thinking mode and turn totals on run
+  via the Execution API — including model, thinking mode, temperature, sampling
+  parameters and turn totals on run
   telemetry. Documents when a run settles Failed (max-turns exhausted, final
   max_tokens with no retries). Also notes when a Completed, Failed, or
   AwaitingInput run becomes eligible for learning evals (BRA207). Documents
@@ -69,7 +70,9 @@ All fields are optional:
     "current_date": "2026-07-30"
   },
   "callbackUrl": "https://app.example.com/brain/callbacks/run-complete",
-  "caller_jwt": "eyJhbGc..."
+  "caller_jwt": "eyJhbGc...",
+  "resumeRunId": "44291...",
+  "resumeMethod": "exclude_tools"
 }
 ```
 
@@ -81,6 +84,8 @@ All fields are optional:
 | `variables` | Optional string→string map persisted on the `WorkflowRun` and exposed to templates as `{{input.<key>}}`. Omit or leave null for unchanged behaviour. Keys and values are plain strings (no type coercion). See [Run variables](#run-variables-input) and **BRA409**. |
 | `callbackUrl` | Honoured on the async path only. Must be `https` (or `http://localhost` / `http://127.0.0.1` in Development). Subject to the brain's shared outbound host allowlist — see [Async callback SSRF rules](#async-callback-ssrf-rules). |
 | `caller_jwt` | Optional opaque JWT forwarded as `Authorization: Bearer` on outbound calls for connectors with `auth-type: caller-jwt`. Never logged or echoed. Nested `run_workflow` / workflow-tool child runs inherit it. The brain does not validate the token. Clerk JWTs often expire in ~60 seconds — on `/run/async`, tool dispatch may happen after expiry and the downstream API will 401. |
+| `resumeRunId` | **Sync only.** Optional id of a finished chat run whose conversation is copied onto this new run. Ignored on `/run/async`. See [Resume a finished session](#resume-a-finished-session). |
+| `resumeMethod` | **Sync only.** `exclude_tools` (default when `resumeRunId` is set), `all_messages`, or `summary`. Omitted `resumeRunId` starts a fresh run and ignores `resumeMethod`. |
 
 ### Run variables (`variables` → `{{input.*}}`)
 
@@ -284,10 +289,55 @@ Validated before the stream commits, so these are real HTTP statuses:
 | Status | When |
 |---|---|
 | `200` (stream) | The session is open (`AwaitingInput`) and the turn is streaming. |
-| `404 Not Found` | No run with that id belongs to the brain. |
-| `409 Conflict` | The run has a turn in progress, or is `Completed` / `Failed` and can no longer be continued. |
+| `404 Not Found` | No run with that id belongs to the brain. The body is `{ "error": "No run with id '…' was found." }`. |
+| `409 Conflict` | The run cannot take another message. The body is `{ "error": "<code>", "message": "…" }` **before** any SSE headers. |
+
+`409` codes:
+
+| `error` | When | `message` |
+|---|---|---|
+| `run_mid_turn` | Status is `Running` (or `Queued`): a turn is already in progress. | The run has a turn in progress; wait for it to finish. |
+| `run_not_continuable` | Status is `Completed` or `Failed`. The session is closed. | `This session is closed and cannot be continued.` |
+
+These are HTTP JSON bodies, not SSE `error` events. On `run_not_continuable`, start a **new** sync run with `resumeRunId` (see below). Do not post another message to the closed run. `run_mid_turn` is the same token `POST /runs/{runId}/complete` returns when a turn is still in progress.
 
 A turn started here re-arms the session's `expiresDateUtc` from the moment it finishes, so an actively used session never times out.
+
+### Resume a finished session
+
+A finished run stays finished. To keep talking, start a new sync run that copies the previous conversation:
+
+```http
+POST /workflows/{code}/run/sync
+Content-Type: application/json
+
+{
+  "inputMessage": "And what about next quarter?",
+  "resumeRunId": "44291...",
+  "resumeMethod": "exclude_tools"
+}
+```
+
+`resumeMethod` defaults to `exclude_tools` when `resumeRunId` is set and the method is omitted. Omit `resumeRunId` — or send it empty — and the call starts a fresh run with no copied history, even if `resumeMethod` is present. That is the request existing clients already send. The new run uses the **requested** workflow: system prompt and instructions come from that workflow, not from the previous run. Entity, unit of work, inbox entry, variables, and `caller_jwt` come from this request only. `ParentWorkflowRunId` is not set.
+
+| Source status | Result |
+|---|---|
+| `Completed` or `Failed` | Allowed. History is copied, then the new `inputMessage` is the first turn. |
+| `AwaitingInput` | `409` `{ "error": "run_still_open", "message": "This session is still open. Continue it with POST /runs/{id}/messages." }` |
+| `Running`, `Queued`, or `Scheduled` | `409` `{ "error": "run_mid_turn", "message": "This session has a turn in progress." }` |
+| Unknown id, or another brain | `404` `{ "error": "No run with id '…' was found." }` |
+| `resumeRunId` omitted or empty | Fresh run. `resumeMethod` is ignored. Same path as a request that predates resume. |
+| Unknown `resumeMethod` when `resumeRunId` is set | `400` `{ "error": "invalid_resume_method", "message": "resumeMethod must be exclude_tools, all_messages, or summary." }` |
+
+| `resumeMethod` | What is copied |
+|---|---|
+| `exclude_tools` (default) | User and assistant text only. Tool calls, tool results, thinking, and failed attempts are dropped. Compaction summaries are kept as `<context_summary>`. |
+| `all_messages` | Active `user`, `assistant`, `tool`, and `compaction` rows, including tool name and tool-call id. The first turn of the new run replays those tool pairs. Later turns on the new run use the normal text transcript. |
+| `summary` | The brain's `COMPACTION` workflow summarises the whole previous transcript. The summary is stored as a `compaction` message on the **new** run. The previous run is not modified (`CompactedAtUtc` is not set). If there is no COMPACTION workflow, or summarisation fails after one retry, the call returns `400` `{ "error": "resume_summary_failed", "message": "The previous session could not be summarised." }` and no chat run is created. Compaction cost sits on the nested COMPACTION run. |
+
+Rows already superseded by compaction are not copied. The previous run's system prompt and workflow instructions are not copied.
+
+Client flow: while the session is `AwaitingInput`, keep calling `POST /runs/{runId}/messages`. When that returns `run_not_continuable`, drop the old run id as the session handle and `POST /workflows/{code}/run/sync` with `resumeRunId` set to it. A `Failed` source is resumed the same way as a `Completed` one. An open session is not resumed; continue it instead.
 
 ### `POST /runs/{runId}/stop` — stop an in-flight turn
 
@@ -332,7 +382,7 @@ Response `200 OK`:
 }
 ```
 
-Idempotent: closing an already-`Completed` session also returns `200`. Returns `404 Not Found` when no such run belongs to the brain, and `409 Conflict` when the run cannot be closed in its current state (e.g. a turn is still in progress — call `stop` first if you need to close immediately).
+Idempotent: closing an already-`Completed` session also returns `200`. Returns `404 Not Found` when no such run belongs to the brain, and `409 Conflict` `{ "error": "run_mid_turn", "message": "…" }` when a turn is still in progress — call `stop` first if you need to close immediately.
 
 ### Session timeout
 
@@ -365,6 +415,11 @@ Response `200 OK`:
     "gen_ai.system": "telos-brain",
     "gen_ai.request.model": "anthropic/claude-sonnet-4-6",
     "telos.thinking.mode": "effort",
+    "gen_ai.request.temperature": 0.2,
+    "gen_ai.request.top_p": 0.9,
+    "gen_ai.request.top_k": 40,
+    "gen_ai.request.min_p": 0.05,
+    "gen_ai.request.presence_penalty": -0.5,
     "telos.workflow.name": "Sales chat",
     "telos.workflow.code": "WF-SALES",
     "telos.workflow.path": "workflows/sales-chat.md",
@@ -390,6 +445,11 @@ Resource / totals extensions (Telos-specific, alongside GenAI semantic conventio
 | `gen_ai.request.model` | Fully-qualified model the run executed against (`provider/model`) |
 | `gen_ai.embeddings.count` | Embeddings generated in the run (always present on `totals`). OTEL standardises `gen_ai.embeddings.dimension.count` (vector size) only; this is the count of embeddings produced. |
 | `cacheRatePercent` | Whole percent: cache reads / (uncached input + cache reads + cache writes). Null when all three are zero. |
+| `gen_ai.request.temperature` | Workflow sampling temperature. Omitted when the workflow does not set one, so the provider default is not reported as `0` or `null`. `0` is included when the workflow set it. Read from the current workflow, the same way as thinking mode. |
+| `gen_ai.request.top_p` | Workflow top-p. Omitted when unset. `0` is included when set. Read from the current workflow. Reported even when the provider request omitted the field. |
+| `gen_ai.request.top_k` | Workflow top-k. Omitted when unset. `0` is included when set. Read from the current workflow. |
+| `gen_ai.request.min_p` | Workflow min-p. Omitted when unset. `0` is included when set. Read from the current workflow. Not an official OTEL key. |
+| `gen_ai.request.presence_penalty` | Workflow presence penalty. Omitted when unset. `0` is included when set. Read from the current workflow. |
 | `telos.thinking.mode` | Workflow thinking mode (`none` \| `adaptive` \| `extended` \| `effort`) |
 | `telos.workflow.name` | Workflow title (falls back to code). Also on the payload as `workflowName`. |
 | `telos.workflow.code` | Workflow deploy code |

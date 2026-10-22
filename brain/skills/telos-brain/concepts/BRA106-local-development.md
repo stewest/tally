@@ -1,7 +1,7 @@
 ---
 name: Local Development
 code: BRA106
-version: 10
+version: 11
 description: How to run Telos Brain locally with the CLI and Docker — start,
   stop, deploy, credentials, pointing connectors at a host app via
   host.docker.internal, and running workflows against a local LLM (Ollama or
@@ -287,10 +287,10 @@ brain deploy --env local --instance local-brain
 
 ---
 
-## 8. Local LLM runners (Ollama / llama.cpp)
+## 8. Local LLM runners (Ollama / llama.cpp / NIM)
 
 Workflows can call a local OpenAI-compatible runner (Ollama, llama.cpp server,
-or similar) instead of Anthropic / OpenAI / xAI. The Brain process still runs
+NVIDIA NIM, or similar) instead of Anthropic / OpenAI / xAI. The Brain process still runs
 in Docker, so the runner URL must be reachable **from the container**.
 
 This does not replace embeddings. Semantic search still needs `VOYAGE_API_KEY`
@@ -313,15 +313,21 @@ LOCAL_LLM_1_BASE_URL=http://host.docker.internal:11434/v1
 # Optional API key for a secured local endpoint:
 # LOCAL_LLM_1_API_KEY=your_optional_key_here
 
+# Optional Cloudflare Access pair (Telos-internal Tunnel + Access). Both or neither:
+# LOCAL_LLM_1_CF_ACCESS_CLIENT_ID=
+# LOCAL_LLM_1_CF_ACCESS_CLIENT_SECRET=
+
 # Optional default for workflows that omit `model:` (a workflow `model:` overrides this):
 # DEFAULT_LLM_MODEL=local_1/qwen3:8b
 ```
 
 | Variable | Required | Meaning |
 | -------- | -------- | ------- |
-| `LOCAL_LLM_1_BASE_URL` | yes, to use `local_1/…` | OpenAI-compatible base URL for runner 1 |
+| `LOCAL_LLM_1_BASE_URL` | yes, to use `local_1/…` | OpenAI-compatible base URL for runner 1 (`http://` LAN or `https://` Access hostname) |
 | `LOCAL_LLM_N_BASE_URL` | yes, to use `local_N/…` | Same for runner N |
 | `LOCAL_LLM_N_API_KEY` | no | Sent as `Authorization: Bearer` when set. Omitted otherwise (Ollama ignores a placeholder). |
+| `LOCAL_LLM_N_CF_ACCESS_CLIENT_ID` | no, pair | Cloudflare Access Client Id. Must be paired with the secret. Sent as `CF-Access-Client-Id` in addition to Bearer. Omit on LAN. |
+| `LOCAL_LLM_N_CF_ACCESS_CLIENT_SECRET` | no, pair | Cloudflare Access Client Secret. Must be paired with the id. Sent as `CF-Access-Client-Secret`. One without the other fails the run. Do not set on customer brains. |
 | `DEFAULT_LLM_MODEL` | no | Optional brain default (`local_1/qwen3:8b`). Same as Settings **Default LLM model**. Used when a workflow omits `model:`. |
 
 A trailing `/v1` is accepted and stripped. The conversant calls
@@ -338,7 +344,7 @@ a new weights file onto an already-wired runner does not.
 
 | Change | Redeploy? |
 | ------ | --------- |
-| Add or change `LOCAL_LLM_N_BASE_URL` / `LOCAL_LLM_N_API_KEY` in `.env.local` | Yes |
+| Add or change `LOCAL_LLM_N_BASE_URL` / `LOCAL_LLM_N_API_KEY` / Access pair in `.env.local` | Yes |
 | Set `DEFAULT_LLM_MODEL` in `.env.local` or `llm-model` in `brain-compose.yml` | Yes |
 | Change a workflow YAML `model:` (e.g. to `local_1/qwen3:8b`) | Yes |
 | `ollama pull` / llama.cpp load of a new model on an existing runner URL | No — Settings lists models from `/v1/models` live |
@@ -375,11 +381,11 @@ model: local_2/gemma4:e4b
 
 The prefix `local_1` resolves `LOCAL_LLM_1_BASE_URL`. The remainder
 (`qwen3:8b`) is passed verbatim to the runner. Unprefixed model names still
-use Anthropic. Omitting `model` uses the brain default (Settings /
+use Anthropic. Omitting `model` uses the brain default list (Settings /
 `DEFAULT_LLM_MODEL` / compose `llm-model`); if that is also unset, the run
-fails — leftover cloud keys are not a silent default. A workflow that sets
-`model:` uses that model when its credential exists, even if a brain default
-is set.
+fails. Leftover cloud keys are not a silent default. A workflow that sets
+`model:` uses that list, even when a brain default is set. A second model is
+another comma-separated id (`local_1/qwen3:8b, openrouter/qwen/qwen3-coder`).
 
 To give every workflow that omits `model:` a local runner, set
 **Default LLM model** in Settings, `DEFAULT_LLM_MODEL` in `.env.local`, or
