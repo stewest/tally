@@ -10,7 +10,11 @@ import {
   BudgetFormValues,
   BudgetSchema,
 } from "@/app/types/form-validation";
-import { BUDGET_PERIODS, TRANSACTION_CATEGORIES } from "@/lib/finance";
+import {
+  BUDGET_PERIOD_LABELS,
+  BUDGET_PERIODS,
+  TRANSACTION_CATEGORIES,
+} from "@/lib/finance";
 
 interface BudgetFormProps {
   defaultValues?: Partial<BudgetFormValues>;
@@ -70,7 +74,7 @@ export default function BudgetForm({
         defaultValue="Select a period"
         options={BUDGET_PERIODS.map(period => ({
           value: period,
-          label: period.charAt(0).toUpperCase() + period.slice(1),
+          label: BUDGET_PERIOD_LABELS[period],
         }))}
         register={register}
         error={errors.period?.message}

@@ -47,5 +47,6 @@ on track. If there are no budgets and no income rows, skip the card.
 ## Rules
 
 - Never invent budget amounts or percentages.
+- One card per category each calendar month. Call `create_insight` anyway: it adds only tips that are not already stated, and it will not open a second card.
 - Prefer British English spelling.
 - Do not treat Transfers as spend or income.

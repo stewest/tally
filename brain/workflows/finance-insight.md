@@ -71,6 +71,7 @@ Category codes and their meaning:
 ## Rules
 
 - Never invent transaction amounts, merchants, or dates.
+- Do not repeat a tip already stated on another insight for this month.
 - Prefer British English spelling.
 - Do not expose API keys or credentials.
 - Do not write more than one insight. This run fills a single card.

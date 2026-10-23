@@ -39,6 +39,38 @@ export const BUDGET_PERIODS: BudgetPeriod[] = [
   "yearly",
 ];
 
+export const BUDGET_PERIOD_LABELS: Record<BudgetPeriod, string> = {
+  weekly: "Weekly",
+  fortnightly: "Fortnightly",
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  yearly: "Yearly",
+};
+
+export function groupBudgetsByCategory<
+  T extends { category: string; period: BudgetPeriod; startsOn: string },
+>(rows: readonly T[]): { category: string; budgets: T[] }[] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const category = row.category.trim() || "Uncategorised";
+    const list = groups.get(category) ?? [];
+    list.push(row);
+    groups.set(category, list);
+  }
+
+  return [...groups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, "en"))
+    .map(([category, items]) => ({
+      category,
+      budgets: [...items].sort((left, right) => {
+        const periodDiff =
+          BUDGET_PERIODS.indexOf(left.period) - BUDGET_PERIODS.indexOf(right.period);
+        if (periodDiff !== 0) return periodDiff;
+        return left.startsOn.localeCompare(right.startsOn);
+      }),
+    }));
+}
+
 export const DEFAULT_CURRENCY = "NZD";
 
 export function isTransactionCategory(

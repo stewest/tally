@@ -48,6 +48,7 @@ ordinary, skip the card rather than guessing.
 ## Rules
 
 - Never invent merchants, dates, or amounts.
+- One card per category each calendar month. Call `create_insight` anyway: it adds only tips that are not already stated, and it will not open a second card.
 - Prefer British English spelling.
 - One unusual coffee is not a finding — look for repeats, jumps, or
   concentration.

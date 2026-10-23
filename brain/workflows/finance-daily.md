@@ -59,8 +59,9 @@ this workflow once per organisation entity (Vercel cron or a local POST to
    - `title` — the friendly category name
    - `tips` — a JSON array string of 3 to 5 tip sentences
 4. If a skill's data is thin, skip that card. Do not invent advice.
-5. If `create_insight` says a card for that category was already recorded
-   today, leave it and continue.
+5. If `create_insight` says the category was already recorded this month,
+   leave it and continue. The tool keeps one card per category each month,
+   adds a tip only when it is new, and skips the card when nothing new is left.
 
 ## Rules
 

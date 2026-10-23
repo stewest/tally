@@ -48,5 +48,6 @@ is visible). If the data is too thin, skip the card.
 ## Rules
 
 - Never invent transaction amounts, merchants, or dates.
+- One card per category each calendar month. Call `create_insight` anyway: it adds only tips that are not already stated, and it will not open a second card.
 - Negative amounts are spend; positive amounts are income.
 - Prefer British English spelling.
