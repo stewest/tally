@@ -49,3 +49,4 @@ next-env.d.ts
 db/migration-files/
 *storybook.log
 storybook-static
+.env*
