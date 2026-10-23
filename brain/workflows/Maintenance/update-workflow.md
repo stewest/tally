@@ -4,14 +4,21 @@ code: WF-UPDATE-WORKFLOW
 description: >-
   Autonomously applies learnings to workflow instructions and tool definitions
   (create or update). Triggered for WORKFLOW_UPDATE and TOOL_UPDATE at high
-  learning mode.
-version: 7
+  learning mode when inbox weight is 5 or higher.
+version: 11
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
+# :high:5 gates Stage 1 (task create) and Stage 2 (auto-run on the parent
+# entry's current Weight). Below weight 5, triage-created tasks park at
+# AWAITING_APPROVAL for manual processing. Routing-specific patterns —
+# not inbox:* — so Stage 1 does not attach this workflow to every
+# high-weight entry.
 type: TRIGGERED
 trigger:
-  - inbox:WORKFLOW_UPDATE:high
-  - inbox:TOOL_UPDATE:high
+  - inbox:WORKFLOW_UPDATE:high:5
+  - inbox:TOOL_UPDATE:high:5
 
 system-prompt-code: WF-BRAIN-SYSTEM
 
@@ -26,6 +33,7 @@ tools:
   - find_available_skills
   - get_skill
   - find_available_tools
+  - activate_tools
   - list_schema_files
   - search_schema_files
   - get_schema_file
@@ -136,6 +144,8 @@ Discard noise, truisms, and speculative rewrites of working workflows.
    tool paths.
 2. `get_schema_file` on each candidate before editing.
 3. Use `find_available_tools` when checking whether a capability already exists.
+   Call `activate_tools` with the names you intend to use. The search result
+   does not make them callable.
 
 Do not create duplicates. Prefer updating an existing workflow/tool over adding
 a parallel one.

@@ -1,10 +1,12 @@
 ---
 name: Simulate Tool Response
 code: WF-SIM
-version: 1
+version: 2
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
+model: anthropic/claude-sonnet-4-6
 type: SIMULATION
 description: Synthesises a plausible tool response from historical sample call/response pairs for simulation runs.
-model: anthropic/claude-sonnet-4-6
 
 # No tools: / available-tools: — the LLM only synthesises from pre-fetched samples.
 # get_sample_tool_results is a system tool; pre-called here so samples arrive as

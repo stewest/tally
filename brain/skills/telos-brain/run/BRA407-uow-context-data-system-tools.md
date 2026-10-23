@@ -1,7 +1,7 @@
 ---
 name: Unit of Work Context and Data System Tools
 code: BRA407
-version: 2
+version: 3
 description: The in-brain system tools for recording and reading Unit of Work
   telemetry — add_uow_context, add_uow_data, update_uow_data, list_uow_context,
   list_uow_data, get_uow_context and get_uow_data. All identity is by 8-character
@@ -22,17 +22,17 @@ tools:
 BRA402 covers the **Execution API** HTTP surface for units of work (paths still
 use Guids). This skill covers the complementary **AI-facing system tools**: a
 running brain adding, listing, reading and updating context and data entries on
-its **currently active** Unit of Work **in-process** — no webhook URL, API key,
+its **currently active** Unit of Work — no webhook URL, API key,
 or unit-of-work reference parameter.
 
 **Identity rule:** every tool parameter and every list/detail field that
 identifies a context or data entry uses an **8-character lowercase alphanumeric
 reference** (`[a-z0-9]{8}`). Do **not** pass UUIDs.
 
-**Active UoW only:** `UnitOfWorkId` is harness-injected from the run. If no unit
+**Active UoW only:** the unit of work comes from the run (set by the harness). If no unit
 of work is in scope, every tool returns a clear plain-English error.
 
-These are ordinary `system` tools (BRA201 §5.2). Declarations live under
+These are ordinary `system` tools (BRA214). Declarations live under
 `tools/uow/` in the brain schema. This skill lists them in frontmatter `tools:`
 so a workflow that keeps them under `available-tools` can promote them via
 `get_skill`.
@@ -140,6 +140,6 @@ Errors are plain English, e.g. `str_replace_old matched 0 times — no replaceme
 ## See also
 
 - **BRA402** — Execution API entities and units of work (HTTP; Guid paths)
-- **BRA201** §5.2 — system tools
+- **BRA214** — system tools
 - **BRA405** — inbox system tools (same reference / progressive-disclosure pattern)
 - **WF-UNIT-OF-WORK-CONTEXT** — canonical unit-of-work workflow pattern

@@ -5,7 +5,9 @@ description: >-
   Builds a grounded frame of reference for a given context using the brain
   glossary and blueprint memory — problem statement, frame, domain model,
   bigger picture, and considerations.
-version: 1
+version: 2
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 # TOOL: callable as a pre-step by other workflows (e.g. via run_workflow or the

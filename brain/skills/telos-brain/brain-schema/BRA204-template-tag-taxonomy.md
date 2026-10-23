@@ -2,7 +2,7 @@
 name: Template Tag Taxonomy
 code: BRA204
 description: Canonical reference for double-curly-bracket template tags used in workflow Instructions and tool response-markdown / error-markdown. Covers the input scope from Execution API variables, workflow-tool / run_workflow parameters, and input-tools mappings.
-version: 12
+version: 19
 ---
 
 # Template Tag Taxonomy
@@ -177,7 +177,7 @@ Notes:
 
 ---
 
-### 3.2a `run` (BRA091)
+### 3.2a `run`
 
 | | |
 | --- | --- |
@@ -187,8 +187,11 @@ Notes:
 
 | Field | Description |
 | --- | --- |
-| `run.reference` | Subject run's 8-character AI-facing reference (`WorkflowRuns.Reference`) for `set_run_grading` (BRA406) |
-| `run.telemetry` | OTEL GenAI telemetry for the subject run as indented JSON (same shape as `GET /runs/{id}/telemetry`, compacted for eval prompts) |
+| `run.reference` | Subject run's 8-character AI-facing reference for `set_run_grading` (BRA406) |
+| `run.workflowName` | Subject workflow **title** (falls back to code; not the eval workflow) |
+| `run.entityName` | Entity name the subject run executed against (nullable) |
+| `run.unitOfWorkName` | Unit-of-work **title** the subject run executed against (nullable) |
+| `run.telemetry` | OTEL GenAI telemetry for the subject run as indented JSON (same shape as `GET /runs/{id}/telemetry`, compacted for eval prompts). Includes `workflowName`, `entityName`, and `unitOfWorkName` alongside the ids. |
 
 Notes:
 
@@ -212,6 +215,9 @@ Notes:
 ```markdown
 ## Subject run
 Reference: {{run.reference}}
+Workflow: {{run.workflowName}}
+Entity: {{run.entityName}}
+Unit of work: {{run.unitOfWorkName}}
 
 ## Run telemetry
 {{run.telemetry}}
@@ -305,12 +311,17 @@ Local: {{now.localDayOfWeek}} {{now.localDate}} {{now.localTime}}
 | Field | Description |
 | --- | --- |
 | `result.{anyKey}` | Top-level key from the JSON response body |
+| `result.error` | On `error-markdown` only: raw tool error text, unless the JSON body already has an `error` key |
 
 Notes:
 
 - The result scope is **flat**. Nested JSON objects/arrays are stringified.
 - If the tool body is not valid JSON, the scope is `{ result: "<raw content>" }`
   — use `{{result.result}}` to print the whole body.
+- On the **error-markdown** path, `{{result.error}}` is also synthesised from the
+  raw tool content unless the JSON body already has an `error` key. Prefer
+  `{{result.error}}` in `error-markdown`; `{{result.result}}` still works for
+  non-JSON error bodies.
 - Field names are unknown at parse time; consult the tool's response payload.
 
 **Example — tool response-markdown:**
@@ -320,7 +331,7 @@ response-markdown: |
   Status: {{result.status}}
   Id: {{result.id}}
 error-markdown: |
-  Failed: {{result.result}}
+  Failed: {{result.error}}
 ```
 
 ---
@@ -343,14 +354,16 @@ variables when the same key appears in both):
 
 | Source | How it is supplied | Persisted on `WorkflowRun`? |
 | --- | --- | --- |
-| Execution API `variables` | Optional string→string map on `POST …/run/sync` and `…/run/async` (BRA403) | Yes (JSON column) |
+| Execution API `variables` | Optional string→string map on `POST …/run/sync` and `…/run/async` (BRA403) | Yes |
 | Workflow-tool / `run_workflow` parameters | Resolved args when this workflow is invoked as a child | No (request only; overlays variables) |
 
 Notes:
 
 - **API variables** — pass `{ "variables": { "widget_reference": "WID-001" } }`
-  on the run body. Use in Instructions as `{{input.widget_reference}}`, and in
-  workflow `input-tools` parameter mappings the same way (BRA201 §8.0a).
+  on the run body. Use in Instructions as `{{input.widget_reference}}`, in
+  workflow `input-tools` parameter mappings the same way (BRA217), and on
+  a tool parameter as `input: widget_reference` to inject it hidden from the
+  model (BRA214).
 - **Workflow-tool params** — declare parameters on the **workflow tool** YAML
   (`parameters:` under the tool that has `workflow: code: …`). Each `name`
   becomes an `input` key. Exposed (model-supplied) params, hardcoded `value:`
@@ -360,9 +373,8 @@ Notes:
 - When neither source supplies data, the scope is empty (tags render blank).
 - Nested `run_workflow` / workflow-tool runs inherit the parent's API
   variables automatically.
-- For workflow-tool children, the same values are still rendered as markdown on
-  the child input message (`## name\nvalue`) for backwards compatibility —
-  prefer `{{input.*}}` in new Instructions. See **BRA201** §5.2.
+- Workflow-tool and `run_workflow` parameters are **not** copied into the child
+  run's user message. Read them with `{{input.*}}` in Instructions. See **BRA214**.
 
 **Example — Execution API variables:**
 
@@ -434,13 +446,14 @@ Template-scope resolution (EntityId only — UnitOfWork is not consulted):
 
 | Path | Iteration | Fields |
 | --- | --- | --- |
-| `blueprint` | — | `blueprint.name`, `blueprint.description` |
+| `blueprint` | — | `blueprint.code`, `blueprint.name`, `blueprint.description` |
 | `blueprint.categories` | `{{#blueprint.categories}}...{{/blueprint.categories}}` | `category.name`, `category.description`, `category.entries` |
 | `category.entries` | `{{#category.entries}}...{{/category.entries}}` | `entry.title`, `entry.version`, `entry.category` |
 | `blueprint.entries` | `{{#blueprint.entries}}...{{/blueprint.entries}}` | `entry.title`, `entry.version`, `entry.category` |
 
 Notes:
 
+- `blueprint.code` is the folder name (for example `company`, `crm`, `jobs`). `blueprint.name` is the title (for example Company, CRM, Job). Pass `blueprint.code` as the `blueprint` argument on the memory tools when a tier has more than one blueprint.
 - `category.entries` and `blueprint.entries` share the **same entry field names**.
 - `entry.category` is the parent category **name** (string), not a nested object.
 - `entry.version` is the entry's centrality integer (default `1`).
@@ -478,6 +491,39 @@ Notes:
 
 ---
 
+### 3.7a `blueprints`
+
+| | |
+| --- | --- |
+| **Type** | Enumerable list at root |
+| **Sort** | Blueprint `Code` ascending; categories and entries use the same order as `blueprint` |
+| **Resolution** | Same tier as the singular `blueprint` scope (EntityId only — UnitOfWork is not consulted). Every active blueprint at that tier is included. The singular `blueprint` scope remains the first of this list. |
+
+| Path | Iteration | Fields |
+| --- | --- | --- |
+| `blueprints` | `{{#blueprints}}...{{/blueprints}}` | `blueprint.code`, `blueprint.name`, `blueprint.description`, `blueprint.categories`, `blueprint.entries` |
+| `blueprint.categories` | `{{#blueprint.categories}}...{{/blueprint.categories}}` | `category.name`, `category.description`, `category.entries` |
+| `category.entries` / `blueprint.entries` | same as §3.7 | `entry.title`, `entry.version`, `entry.category` |
+
+Inside the loop the current item is bound as `blueprint`, so the category and entry tags match the singular scope. Use this when a brain has more than one blueprint at the resolved tier.
+
+**Example — every blueprint, with its name and categories:**
+
+```markdown
+{{#blueprints}}
+# {{blueprint.name}} (`{{blueprint.code}}`)
+{{blueprint.description}}
+
+{{#blueprint.categories}}
+### {{category.name}}
+{{category.description}}
+{{/blueprint.categories}}
+
+{{/blueprints}}
+```
+
+---
+
 ### 3.8 `inboxEntry`
 
 | | |
@@ -492,14 +538,19 @@ Notes:
 | `inboxEntry.date` | Source-event timestamp (`yyyy-MM-dd HH:mm:ss UTC`) |
 | `inboxEntry.source` | Free-text producing-system identifier (nullable) |
 | `inboxEntry.title` | Entry title |
-| `inboxEntry.body` | Full signal content (markdown) |
-| `inboxEntry.status` | Lifecycle status (`PENDING`, `REVIEWING`, `APPLIED`, `DISMISSED`) |
+| `inboxEntry.body` | Full signal content (markdown), prepended with Workflow name, Entity name, Unit of work name, Weight, and Cluster so workflows that only inject the body still see those fields |
+| `inboxEntry.status` | Lifecycle status (`PENDING`, `PROCESSED`, `COMPLETED`) |
 | `inboxEntry.routingType` | Routing classification (nullable until triaged) |
+| `inboxEntry.workflowName` | Source-context workflow being graded (nullable) |
+| `inboxEntry.entityName` | Source-context entity name (nullable) |
+| `inboxEntry.unitOfWorkName` | Source-context unit of work (nullable) |
+| `inboxEntry.weight` | Ranking weight (integer; default 1) |
+| `inboxEntry.clusterReference` | 8-character reference of the cluster entry this signal belongs to (nullable; never a UUID) |
 
 Notes:
 
-- Populated when a `TRIGGERED` workflow runs from an inbox task (Hangfire
-  processor, `update_inbox_task` approval, or Execution API approve). Non-inbox
+- Populated when a `TRIGGERED` workflow runs from an inbox task (auto-run,
+  `update_inbox_task` approval, or Execution API approve). Non-inbox
   runs leave this scope blank.
 - **Do not** expect the entry body in the workflow input message. The task
   `Action` / input is **instructions-only**; entry content must be pulled in via
@@ -514,6 +565,11 @@ Notes:
 **Source:** {{inboxEntry.source}}
 **Status:** {{inboxEntry.status}}
 **Routing:** {{inboxEntry.routingType}}
+**Workflow:** {{inboxEntry.workflowName}}
+**Entity:** {{inboxEntry.entityName}}
+**Unit of work:** {{inboxEntry.unitOfWorkName}}
+**Weight:** {{inboxEntry.weight}}
+**Cluster:** {{inboxEntry.clusterReference}}
 
 ## Body
 
@@ -579,7 +635,7 @@ Notes:
 
 Notes:
 
-- Populated for the **triggering** inbox task only (Hangfire processor,
+- Populated for the **triggering** inbox task only (auto-run,
   `update_inbox_task` approval, or Execution API approve). Sibling tasks remain
   available via `{{#inboxTasks}}`.
 - Field names match the short-form item fields inside `{{#inboxTasks}}`, but are
@@ -632,7 +688,8 @@ Notes:
 | `now` | — | `utcDate`, `utcTime`, `utcDayOfWeek`, `localDate`, `localTime`, `localDayOfWeek` |
 | `result` | — | `{anyKey}` (flat) |
 | `input` | — | `{key}` (flat; Execution API `variables` + workflow-tool / `run_workflow` params) |
-| `blueprint` | `.categories` → `.entries`; `.entries` | `blueprint.name/description`; `category.name/description`; `entry.title/version/category` |
+| `blueprint` | `.categories` → `.entries`; `.entries` | `blueprint.code/name/description`; `category.name/description`; `entry.title/version/category` |
+| `blueprints` | root → `.categories` → `.entries`; `.entries` | `blueprint.code/name/description`; `category.name/description`; `entry.title/version/category` |
 | `inboxEntry` | — | `reference`, `date`, `source`, `title`, `body`, `status`, `routingType` |
 | `inboxTasks` | root | `reference`, `action`, `response`, `status`, `workflowCode`, `expertOpinion` |
 | `task` | — | `reference`, `action`, `response`, `status`, `workflowCode`, `expertOpinion` |

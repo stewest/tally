@@ -1,14 +1,16 @@
 ---
 name: Review Unit of Work
-code: WF-REVIEW-UOW
+code: WF-EVAL
 description: >-
   On unit-of-work completion, detects domain concepts that fit blueprint
   categories and creates a PROCESSED inbox entry with one review_blueprint task
   per learning. Does not grade agent quality (see WF-EVAL-RUN).
-version: 1
+version: 3
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
+model: anthropic/claude-sonnet-4-6
 type: TRIGGERED
 trigger: unitofwork:complete:low
-model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
 
 output-tokens: 4096, 8192
@@ -81,7 +83,7 @@ run; otherwise brain-global). Match learnings only to these:
       - `routing_type` — `MEMORY_UPDATE`
       - `status` — `PROCESSED` (required — skips entry-create inbox triggers;
         tasks below drive `WF-REVIEW-BLUEPRINT`)
-      - `source` — `WF-REVIEW-UOW`
+      - `source` — `WF-EVAL`
    b. From the tool result, take the new entry's **8-character reference**.
    c. For **each** candidate learning, call `add_inbox_task` once with:
       - `inbox_entry_reference` — that reference

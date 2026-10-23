@@ -4,7 +4,9 @@ code: WF-ASK-QUESTION
 description: >-
   Answers a single question by searching the brain's memory blueprint and
   returning only information that answers the question.
-version: 1
+version: 2
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 # TOOL: not run manually — exposed via tools/execution/qa/ask-question.yml and

@@ -4,7 +4,7 @@ code: WF-BRAIN-SYSTEM
 description: >-
   Maintenance system prompt — how the brain, skillbooks, skills, workflows,
   tools and management tools work. Used only by brain-maintenance workflows.
-version: 4
+version: 5
 
 # Never executed directly — referenced via system-prompt-code.
 type: SYSTEM
@@ -43,12 +43,14 @@ blocks:
 | Workflow | Routing | Responsibility |
 |---|---|---|
 | `WF-TRIAGE` | `inbox:*` | Classify learnings; create instruction-only tasks |
-| `WF-UPDATE-SKILL` | `SKILL_UPDATE` (`:high`) | Skill Book craft |
-| `WF-UPDATE-WORKFLOW` | `WORKFLOW_UPDATE` / `TOOL_UPDATE` (`:high`) | Workflow + tool definition fixes |
-| `WF-UPDATE-BRAIN` | `SYSTEM_CHANGE` (`:high`) | Subagents, wiring, structural self-heal |
+| `WF-UPDATE-SKILL` | `SKILL_UPDATE` (`:high:5`) | Skill Book craft |
+| `WF-UPDATE-WORKFLOW` | `WORKFLOW_UPDATE` / `TOOL_UPDATE` (`:high:5`) | Workflow + tool definition fixes |
+| `WF-UPDATE-BRAIN` | `SYSTEM_CHANGE` (`:high:5`) | Subagents, wiring, structural self-heal |
 
 Update workflows auto-run only when the brain `learning-mode` meets their
-trigger qualifier (this starter brain uses `high`).
+qualifier (this starter brain uses `high`) **and** the parent entry's
+**current** weight is 5 or higher (BRA404 Stage 1 and Stage 2). Below
+that, tasks park at `AWAITING_APPROVAL` for manual processing.
 
 # Skill Books and skills
 
@@ -117,7 +119,8 @@ manifests with `create_schema_file`.
 | Tool | Use |
 |---|---|
 | `find_available_skills` / `get_skill` | Find and load skills |
-| `find_available_tools` | Search the workflow's available tool pool |
+| `find_available_tools` | Search the workflow's available tool pool. Names only |
+| `activate_tools` | Make those names callable for the rest of this run |
 
 Always load the authoring skills above before mutating schema. Always search
 before creating. Duplicates degrade the brain.

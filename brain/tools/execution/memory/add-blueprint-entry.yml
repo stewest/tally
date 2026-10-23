@@ -1,10 +1,11 @@
 name: add_blueprint_entry
-version: 1
+version: 3
 description: >-
-  Adds a new entry to this brain's memory blueprint under an existing category.
-  Use to record a distilled, reusable insight. Fails if an entry with the same
-  title already exists. The target blueprint is resolved automatically from the
-  run's context; you never choose it.
+  Adds a new entry to a memory blueprint under an existing category. Use to
+  record distilled, reusable knowledge. Pass blueprint (code or title) when
+  more than one blueprint exists at the current scope. Fails if an entry with
+  the same title already exists. Use update_blueprint_entry to change an
+  existing entry.
 system:
   tool: add_blueprint_entry
 parameters:
@@ -23,3 +24,12 @@ parameters:
     description: The entry content as Markdown.
     type: string
     required: true
+  - name: blueprint
+    param: blueprint
+    description: >-
+      Optional. Code or title of the blueprint to use. Required when more than
+      one blueprint exists at the current scope. A scope with a single
+      blueprint may omit it. An unknown name is an error and does not fall
+      back to another blueprint.
+    type: string
+    required: false

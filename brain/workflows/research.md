@@ -5,7 +5,9 @@ description: >-
   Researches a topic from an inbox entry using web search, web fetch, skills,
   and memory. Compiles findings into a new PROCESSED inbox entry (no RESEARCH
   routing — prevents recursion).
-version: 3
+version: 4
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 # Tasks are created by WF-TRIAGE (or Admin routing) with workflow_code

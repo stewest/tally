@@ -4,12 +4,19 @@ code: WF-UPDATE-BRAIN
 description: >-
   Autonomously self-heals and self-manages the brain: subagents (TOOL workflows
   exposed as workflow tools), wiring, and other structural schema fixes outside
-  skill-craft and simple workflow/tool edits. High learning mode only.
-version: 7
+  skill-craft and simple workflow/tool edits. High learning mode and inbox
+  weight 5 or higher.
+version: 11
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
-
+# :high:5 gates Stage 1 (task create) and Stage 2 (auto-run on the parent
+# entry's current Weight). Below weight 5, triage-created tasks park at
+# AWAITING_APPROVAL for manual processing. Keep SYSTEM_CHANGE (not
+# inbox:*) so Stage 1 does not attach this workflow to every high-weight
+# entry.
 type: TRIGGERED
-trigger: inbox:SYSTEM_CHANGE:high
+trigger: inbox:SYSTEM_CHANGE:high:5
 
 system-prompt-code: WF-BRAIN-SYSTEM
 
@@ -24,6 +31,7 @@ tools:
   - find_available_skills
   - get_skill
   - find_available_tools
+  - activate_tools
   - list_schema_files
   - search_schema_files
   - get_schema_file
@@ -166,7 +174,8 @@ If there is no actionable structural signal, stop without changes.
 
 1. `list_schema_files` / `search_schema_files` / `get_schema_file` to see what
    already exists.
-2. `find_available_tools` / `find_available_skills` to avoid duplicates.
+2. `find_available_tools` / `find_available_skills` to avoid duplicates. Call
+   `activate_tools` with any available-tool names you then need to call.
 
 ### Phase 3: Execute
 

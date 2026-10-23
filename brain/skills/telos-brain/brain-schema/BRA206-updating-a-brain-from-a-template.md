@@ -1,11 +1,12 @@
 ---
 name: Updating a Brain from a Template
 code: BRA206
-version: 1
+version: 5
 description: How to update an existing brain's configuration from a source
   (template) brain via the Management API — POST
   /brains/{targetInstance}/update-from/{sourceInstance} — including version
-  precedence, what is synced, embeddings, and the DeploySummary response.
+  precedence, what is synced (including connectors), embeddings, and the
+  DeploySummary response.
 ---
 
 # Updating a Brain from a Template
@@ -17,7 +18,7 @@ those improvements into the destination **without overwriting** resources the
 destination already holds at a higher version.
 
 Update-from is a version-gated configuration sync. It mirrors CLI redeploy
-precedence (BRA201 §9) over an HTTP call between two brains in the same
+precedence (BRA201) over an HTTP call between two brains in the same
 organisation. Runtime data and destination environment variables are never
 touched.
 
@@ -70,6 +71,14 @@ endpoints (`/skills`, `/workflows`, `/tools`, `/memory`, `/schema`):
       "message": "Workflow 'WF-CHAT' not updated: incoming version 1 is less than stored version 4."
     },
     {
+      "resourceType": "Connector",
+      "code": "example-oauth2",
+      "action": "Created",
+      "incomingVersion": 0,
+      "storedVersion": 0,
+      "message": null
+    },
+    {
       "resourceType": "Tool",
       "code": "list_inbox_entries",
       "action": "Created",
@@ -109,7 +118,7 @@ shape: `{ "error": "message" }`.
 
 ## 2. Version precedence
 
-Applied independently per versioned resource (same rule as BRA201 §9 / CLI
+Applied independently per versioned resource (same rule as BRA201 / CLI
 redeploy):
 
 | Condition | Outcome |
@@ -120,20 +129,26 @@ redeploy):
 
 ### Versioned resources
 
-| Layer | Key | Notes |
+| Layer | Matched by | Notes |
 |---|---|---|
-| SkillBooks | `(BrainId, Code)` | Categories reconciled even when the book itself conflicts (skills are independently versioned) |
-| Skills | `(BrainId, Code)` | Embeddings copied or nullified — see §4 |
-| ToolGroups | `(BrainId, Name)` | Upserted by name (not independently versioned) |
-| Tools | `(BrainId, Name)` | ToolParameters replaced wholesale when the tool is Created/Updated |
-| Workflows | `(BrainId, Code)` | WorkflowTools replaced wholesale when the workflow is Created/Updated; Tool IDs re-linked by **tool name** on the destination |
-| Blueprints | `(BrainId, Code)` | Categories, entries, chunks, and chunk embeddings replaced wholesale when the blueprint is Created/Updated |
+| Skill books | `code` | Categories reconciled even when the book itself conflicts (skills are independently versioned) |
+| Skills | `code` | Embeddings copied or nullified — see §4 |
+| Tool groups | `name` | Upserted by name (not independently versioned) |
+| Tools | `name` | Parameters replaced wholesale when the tool is Created/Updated |
+| Workflows | `code` | Tool lists replaced wholesale when the workflow is Created/Updated; tools re-linked by **name** on the destination |
+| Blueprints | `code` | Categories, entries, chunks, and embeddings replaced wholesale when the blueprint is Created/Updated |
 
 ### Versionless resources (upsert-always)
 
-`EntityType`, `EntityVariableKey`, and `UnitOfWorkType` have no version field.
-They are always created or refreshed (`IsDeleted` reset to `false`). They never
-produce `VersionConflict`. Versions in the summary are reported as `0`.
+Connectors, entity types, entity variable keys, and unit-of-work types have no
+version field. They are always created or refreshed. They never produce
+`VersionConflict`. Versions in the summary are reported as `0`.
+
+| Layer | Matched by | Notes |
+|---|---|---|
+| Connectors | `name` | Parameters replaced wholesale. Destination-only connectors are left alone. Runtime-discovered OAuth endpoints (`authorization-url` / `token-url` / `oauth-scope`) are kept when the source omits them. |
+| Entity types | `code` | Variable keys reconciled (keys absent from the source are removed) |
+| Unit-of-work types | `code` | Variable keys reconciled (keys absent from the source are removed) |
 
 ---
 
@@ -141,38 +156,39 @@ produce `VersionConflict`. Versions in the summary are reported as `0`.
 
 ### Synced (configuration layer only)
 
-- Tools: ToolGroups → Tools → ToolParameters
-- Workflows → WorkflowTools (re-linked to destination Tool IDs by name)
-- Skills: SkillBooks → SkillCategories → Skills
-- Memory: Blueprints → BlueprintCategories → BlueprintEntries → EntryChunks → ChunkEmbeddings
-- Schema types: EntityTypes → EntityVariableKeys; UnitOfWorkTypes
+- Connectors (definitions and declared parameters; upserted by name before tools)
+- Tools (groups, tools, and parameters)
+- Workflows (tool lists re-linked by name on the destination)
+- Skills (books, categories, and skills)
+- Memory (blueprints, categories, entries, chunks, and embeddings)
+- Schema types (entity types and variable keys; unit-of-work types)
 
 ### Not touched
 
 | Layer | Why |
 |---|---|
-| **BrainEnvironmentVariables** | Not versioned; destination secrets stay as-is (unlike clone, which copies/merges them — BRA205) |
-| **Brain header** | `InstanceName`, `ApiKey`, `EmbeddingModel`, display name — left unchanged on the destination |
-| **Runtime data** | WorkflowRuns, Entities, UnitsOfWork, InboxEntries, InboxTasks, etc. |
+| **Environment variables** | Not versioned; destination secrets stay as-is (unlike clone, which copies/merges them and remaps `CONNECTOR_{id}_*` keys — BRA205). Newly created connectors need secrets supplied separately. |
+| **Brain header** | Instance name, API key, embedding model, display name — left unchanged on the destination |
+| **OAuth tokens** | Runtime Connect state; the destination must reconnect. Tokens are also excluded from clone. |
+| **Runtime data** | Workflow runs, entities, units of work, inbox entries and tasks, etc. |
 
 ### Transactionality
 
-The whole sync runs in a **single database transaction**. Any failure rolls back
-completely; partial updates do not persist.
+The whole sync is **all-or-nothing**. A failure leaves the destination unchanged.
 
 ---
 
 ## 4. Embeddings
 
 Skills, tools, and blueprint chunk embeddings are portable only when both brains
-share the same `EmbeddingModel`.
+share the same `embedding-model`.
 
 | Condition | Behaviour |
 |---|---|
-| `source.EmbeddingModel == target.EmbeddingModel` | Copy embedding bytes / model / dimensions from source |
-| Models differ | Nullify skill/tool embeddings; omit chunk embedding rows so the destination can regenerate on a later index/deploy |
+| Same embedding model | Copy embeddings from source |
+| Models differ | Clear skill/tool embeddings so the destination can regenerate them on a later index/deploy |
 
-Update-from does **not** change the destination's `EmbeddingModel`.
+Update-from does **not** change the destination's `embedding-model`.
 
 ---
 
@@ -202,5 +218,6 @@ those via deploy or `POST /brains/{instance}/environment-variables` (BRA202).
 
 - **BRA201** — schema authoring and deploy versioning (same precedence rule)
 - **BRA202** — environment variables (left untouched by update-from)
-- **BRA205** — cloning a brain (creates the destination twin this endpoint updates)
+- **BRA205** — cloning a brain (creates the destination twin this endpoint updates; clone *does* copy connectors and remap their secret keys)
+- **BRA209** — connector YAML authoring
 - **BRA401** — Management vs Execution API authentication

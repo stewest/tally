@@ -1,7 +1,7 @@
 ---
 name: "Execution API: Authentication & Conventions"
 code: BRA401
-version: 3
+version: 5
 description: How to authenticate with the Telos Brain Execution API, how tenancy
   is resolved, the brain identity endpoint, and the common conventions (status
   codes, error format, content types) that apply across all endpoints.
@@ -9,7 +9,7 @@ description: How to authenticate with the Telos Brain Execution API, how tenancy
 
 # Execution API: Authentication & Conventions
 
-The Execution API is the runtime surface of a Telos Brain. It is entirely separate from the Management API (the deploy plane used by the CLI) — different middleware, different credentials, different routes.
+The Execution API is the runtime surface of a Telos Brain. It is entirely separate from the Management API (the deploy plane used by the CLI) — different middleware, different credentials, different routes. See **BRA301** for Management API authentication, conventions, and public organisation signup.
 
 | | Management API | Execution API |
 |---|---|---|
@@ -28,7 +28,7 @@ All Execution API endpoints are secured by the **brain API key**, issued once by
 Authorization: Bearer <brain-api-key>
 ```
 
-The key resolves to a single active brain, which becomes the implicit tenant scope for the entire request. An EF global query filter is activated — every entity, unit of work, workflow, run, and telemetry read/write is automatically scoped to that brain. **No `brain_id` is ever accepted in a request body or route.**
+The key resolves to a single active brain, which becomes the implicit tenant scope for the entire request. Every entity, unit of work, workflow, run, and telemetry read/write is scoped to that brain. **No `brain_id` is ever accepted in a request body or route.**
 
 ### Auth behaviour
 

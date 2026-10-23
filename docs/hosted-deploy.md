@@ -2,6 +2,8 @@
 
 This is the Preview / Production path for TALLY: a personal GitHub repo, Clerk + hosted Supabase, a Vercel project, and a Brain instance on [Telos Hosted](https://go.telosbrain.com). Local Docker Brain (`brain start`) is **dev only**. Do not copy `BRAIN_API_KEY` from `brain.lock` or `brain/.env.local` into Vercel.
 
+To put Execution API credentials on the Vercel project without pasting them, add the [Telos Brain integration](https://vercel.com/integrations/telos-brain) after you have a hosted brain (step 2). It writes `TELOS_BRAIN_API_URL` and `BRAIN_API_KEY`. It does **not** work with a local Docker brain (`brain start`). Full steps: [README — Telos Brain Vercel integration](../README.md#telos-brain-vercel-integration).
+
 If the Cursor browser hangs on Clerk **Continue**, GitHub OAuth **Authorize**, or similar, finish the step in a regular browser, then return.
 
 ## Prerequisites
@@ -13,7 +15,7 @@ Accounts and keys you will need:
 - [Clerk](https://dashboard.clerk.com) (required on Vercel / production)
 - [Supabase](https://supabase.com/dashboard) (hosted project, not local `supabase start`)
 - [Vercel](https://vercel.com)
-- Anthropic and Voyage API keys (this brain defaults to `voyage-3-lite`)
+- Anthropic API key (workflows pin Anthropic, and that pin is the whole run until you delete it). Voyage is optional at deploy (`voyage-3-lite`; embeddings skipped if unset). Optional keys for a model you name yourself: OpenRouter (`openrouter/auto`), Azure OpenAI, OpenAI / xAI, `DEFAULT_LLM_MODEL`, or compose `llm-model: telosbrain/xai/grok-4.6` on Telos Hosted (2× xAI list on brain credit; TALLY leaves this commented) (BRA210 / BRA212)
 
 A random shared tool secret (`TOOL_API_KEY` / `MY_APP_API_KEY`) — generate a new one for hosted; do not reuse a value you are not sure about.
 
@@ -211,16 +213,19 @@ Minimum for a first Brain-enabled deploy:
 | Variable | Notes |
 |---|---|
 | `TELOS_BRAIN_ORG_API_KEY` | Org key from step 2 (`tbk_…`). CLI only; never uploaded to the brain. |
-| `BRAIN_URL` | `https://go.telosbrain.com` |
-| `ANTHROPIC_API_KEY` | Required for this brain’s workflows |
-| `VOYAGE_API_KEY` | Required (`voyage-3-lite`) |
+| `BRAIN_URL` | Optional if you added the [Telos Brain integration](https://vercel.com/integrations/telos-brain) (`TELOS_BRAIN_API_URL`). Otherwise `https://go.telosbrain.com` |
+| `ANTHROPIC_API_KEY` | Required. Workflows pin `anthropic/…`, and that pin is the whole run |
+| `VOYAGE_API_KEY` | Optional at deploy (default `voyage-3-lite`; embeddings skipped if unset). Or set `embedding-model` to `local_1/<model>` and `LOCAL_LLM_1_BASE_URL` |
+| `OPENROUTER_API_KEY` / `OPENAI_API_KEY` / `XAI_API_KEY` | Optional. For `openrouter/…`, `openrouter/auto`, `openai/…`, or `xai/…` |
+| `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` | Optional. For `azure/<deployment>` (optional `AZURE_OPENAI_API_VERSION`) |
+| `DEFAULT_LLM_MODEL` | Optional. Brain default for workflows that omit `model:`. Does not override a workflow pin (BRA210) |
 | `TOOL_API_KEY` | Shared tool handshake; deploy copies it to `MY_APP_API_KEY` |
 | `POSTGRES_URL` | Hosted Postgres |
 | Clerk + Supabase vars | From steps 3–4 |
 | `NEXT_PUBLIC_SITE_URL` | Public app URL |
 | `MY_APP_API_URL` | Optional. Public `https://` app URL the Brain calls for tools. Default: Vercel production / Preview URL. Override if `.env.example` imported `host.docker.internal`. |
 
-Leave **`BRAIN_API_KEY` empty** on the first deploy (or set `BRAIN_DEPLOY=0` if you only want the Next.js app + migrations while you debug). Do **not** paste the local Docker execution key.
+Leave **`BRAIN_API_KEY` empty** on the first deploy unless you already added the [Telos Brain integration](https://vercel.com/integrations/telos-brain) and picked this project’s brain. Or set `BRAIN_DEPLOY=0` if you only want the Next.js app + migrations while you debug. Do **not** paste the local Docker execution key.
 
 Optional: `BRAIN_INSTANCE` defaults to `{VERCEL_PROJECT_NAME}-prod` or `{VERCEL_PROJECT_NAME}-preview`. Do not reuse `local-brain`.
 
@@ -238,7 +243,7 @@ The first hosted deploy of a **new** Brain instance prints a **new** execution A
 - `✓ Created brain <uuid> (instance <project>-prod)`
 - `Save this API key now — it is shown only once:` followed by the key on the next line (a long token; it may **not** use a `bk_…` prefix)
 
-Paste that value into that environment’s `BRAIN_API_KEY` (**Environment Variables** → search `BRAIN_API_KEY` → **Edit** → **Save**). Preview and Production each get their own instance and key.
+Paste that value into that environment’s `BRAIN_API_KEY` (**Environment Variables** → search `BRAIN_API_KEY` → **Edit** → **Save**), **or** add the [Telos Brain integration](https://vercel.com/integrations/telos-brain) and pick the brain that deploy just created. Preview and Production each get their own instance and key.
 
 After a successful Brain deploy, **Brains** on go.telosbrain.com lists the instance: columns **NAME**, **STATUS**, **API KEY**, **CREATED**. Example: **Starter Brain** / `<project>-prod` / **Active**. Empty org starts with **Deploy your first brain**; it fills in after the first `brain:deploy`.
 
@@ -248,11 +253,11 @@ Redeploy so the app **and** the brain pick up `BRAIN_API_KEY` for tool callbacks
 
 ## 8. Smoke-test Chat
 
-Open the Vercel URL, sign in with Clerk, create/select an organisation if prompted, open **Chat**, send a message (workflow `WF-CHAT`). Titles generate via `WF-CHAT-TITLE`. You can paste `samples/bank-statement.txt`.
+Open the Vercel URL, sign in with Clerk, create/select an organisation if prompted, open **Chat**, send a message (workflow `WF-CHAT`). Titles generate via `WF-CHAT-TITLE`. You can paste `samples/transactions.csv`.
 
-If Chat says Brain is not configured, `BRAIN_URL` or `BRAIN_API_KEY` is missing for that environment.
+If Chat says Brain is not configured, `BRAIN_API_KEY` is missing, or neither `BRAIN_URL` nor `TELOS_BRAIN_API_URL` is set for that environment. Add the [Telos Brain integration](https://vercel.com/integrations/telos-brain) or set them by hand, then redeploy.
 
-Chat is **app → Brain**. Tools such as `record_transactions` are **Brain → your Vercel URL**. After a first Chat message works, paste `samples/bank-statement.txt` to prove the webhook path. Two host-side blocks look similar (parsed rows, import never lands):
+Chat is **app → Brain**. Tools such as `record_transactions` are **Brain → your Vercel URL**. After a first Chat message works, paste `samples/transactions.csv` to prove the webhook path. Two host-side blocks look similar (parsed rows, import never lands):
 
 1. **Vercel Authentication** — `401 Protected deployment`. See **Deployment Protection** above. Your browser has a Vercel SSO cookie; the Brain does not.
 2. **Callback allowlist** — `The tool 'record_transactions' webhook URL was blocked for safety: URL host is not in the allowed callback domains.` Set `MY_APP_API_URL` to the public production URL, then redeploy so `brain:deploy` merges that hostname into `allowed-callback-domains` (exact hosts only; no wildcards). Optional extra host: `BRAIN_CALLBACK_DOMAIN`.

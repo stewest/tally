@@ -15,11 +15,15 @@ Precise enough for Cursor / Claude Code. Complete local steps in the root README
 # From repo root: npm install (or npm run prepare) starts Brain, writes
 # MY_APP_API_KEY plus BRAIN_API_KEY (from brain start) into .env.local and the app .env,
 # and runs npm run db:push. Then fill ANTHROPIC_API_KEY, VOYAGE_API_KEY, and remaining
-# MY_APP_* in .env.local
+# MY_APP_* in .env.local. Optional: OPENROUTER_API_KEY, AZURE_OPENAI_*,
+# LOCAL_LLM_1_BASE_URL, DEFAULT_LLM_MODEL (BRA210 / BRA106 §8).
+# Telos Hosted can use compose llm-model: telosbrain/xai/grok-4.6 (not local).
 brain deploy --env local --instance local-brain
 ```
 
 Do not delete `brain.lock`. Hosted first deploy still prints a **new** execution key — do not reuse the local one.
+
+**Changing models or local LLMs.** After you add or edit `DEFAULT_LLM_MODEL`, `LOCAL_LLM_*`, a provider API key, compose `llm-model`, or a workflow `model:` pin, redeploy so the brain stores the new values. Settings **Default LLM model** applies immediately (no deploy). Persist the same value as `DEFAULT_LLM_MODEL` in `.env.local` (or `llm-model` in compose) so the next deploy does not clear it. Local Ollama from Brain-in-Docker must use `http://host.docker.internal:11434/v1`, not `localhost`. Full how-to: **BRA106** §8 / **BRA210**.
 
 From the repo root, `npm run stack:reset` stops this stack and deletes the local SQL volume. Then `npm run prepare` to start clean.
 
@@ -29,7 +33,7 @@ Full local stack behaviour: skill **BRA106** (`skills/telos-brain/concepts/BRA10
 
 ## Preview and production (Telos Hosted)
 
-Vercel deploys this schema on every Preview and Production build (`npm run brain:deploy` from the repo root), next to Drizzle migrate. Set `TELOS_BRAIN_ORG_API_KEY`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and `TOOL_API_KEY` on each Vercel environment. Preview defaults to instance `{project}-preview` (`--env stage`); Production to `{project}-prod` (`--env prod`). Override with `BRAIN_INSTANCE`.
+Vercel deploys this schema on every Preview and Production build (`npm run brain:deploy` from the repo root), next to Drizzle migrate. Set `TELOS_BRAIN_ORG_API_KEY`, `ANTHROPIC_API_KEY`, and `TOOL_API_KEY` on each Vercel environment. `VOYAGE_API_KEY` is optional at deploy (embeddings skipped if unset). To embed on a local runner instead, set `embedding-model: local_1/<model>` and `LOCAL_LLM_1_BASE_URL`. Optional: `OPENROUTER_API_KEY`, `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT`, `OPENAI_API_KEY`, `XAI_API_KEY`, `DEFAULT_LLM_MODEL`. Preview defaults to instance `{project}-preview` (`--env stage`); Production to `{project}-prod` (`--env prod`). Override with `BRAIN_INSTANCE`.
 
 The script copies `.env.example` to `.env.stage` / `.env.prod` so declared keys exist; Vercel secrets override placeholders. It merges the current app hostname into `allowed-callback-domains` (exact hosts only — no wildcards). Add a stable custom domain to `brain-compose.yml` as well.
 
@@ -40,7 +44,7 @@ npm run brain:deploy
 # BRAIN_DEPLOY=0
 ```
 
-Hosted first deploy prints a **new** execution key in the build log — do not reuse the local key. Paste it into that environment’s `BRAIN_API_KEY` and redeploy.
+Hosted first deploy prints a **new** execution key in the build log — do not reuse the local key. Paste it into that environment’s `BRAIN_API_KEY` and redeploy, or add the [Telos Brain Vercel integration](https://vercel.com/integrations/telos-brain) and pick that brain (see the [root README](../README.md#telos-brain-vercel-integration)).
 
 ## Building the schema
 
@@ -57,7 +61,7 @@ After the schema exists, upload documents, transcripts, or emails via the Brain 
 
 ## Daily insight heartbeat
 
-`WF-FINANCE-DAILY` declares `frequency: daily` as the Brain heartbeat example. Brain 0.4.7 does not yet fan out scheduled runs per organisation entity, so finance tools would have no `organisationId` if the workflow ran with no entity.
+`WF-FINANCE-DAILY` declares `frequency: daily` as the Brain heartbeat example. Brain does not yet fan out scheduled runs per organisation entity, so finance tools would have no `organisationId` if the workflow ran with no entity.
 
 The host app starts one async run per organisation that already has a Brain entity and at least one transaction:
 

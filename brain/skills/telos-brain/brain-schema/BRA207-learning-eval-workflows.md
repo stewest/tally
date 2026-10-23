@@ -1,12 +1,12 @@
 ---
 name: Learning Eval Workflows
 code: BRA207
-version: 3
-description: How to author TRIGGERED learning-eval workflows that grade a
-  completed unit of work or workflow run, inject telemetry via template tags,
-  persist a 0–100 score with set_run_grading, and create inbox learnings with
-  create_inbox_entry — including manual Run eval and automatic enqueue modes
-  (BRA091 / BRA112).
+version: 11
+description: How to author type EVAL (workflow-run) and TRIGGERED
+  (unit-of-work) learning-eval workflows that grade a completed unit of work
+  or workflow run, inject telemetry via template tags, persist a 0–100 score
+  with set_run_grading, and create inbox learnings with create_inbox_entry —
+  including the Run eval button (type) and automatic enqueue (trigger).
 ---
 
 # Learning Eval Workflows
@@ -18,10 +18,10 @@ is applied automatically.
 
 There are two eval surfaces:
 
-| Surface | Trigger | Telemetry in instructions | Typical code |
-| --- | --- | --- | --- |
-| Unit of work | `unitofwork:complete` | `{{#unitOfWork.context}}` / `{{#unitOfWork.data}}` (BRA204) | `WF-EVAL` |
-| Workflow run | `workflowrun:complete` | `{{run.telemetry}}` + `{{run.reference}}` (BRA204) | `WF-EVAL-RUN` |
+| Surface | Identity | Automatic trigger | Telemetry in instructions | Typical code |
+| --- | --- | --- | --- | --- |
+| Unit of work | `type: TRIGGERED` + code `WF-EVAL` | `unitofwork:complete` | `{{#unitOfWork.context}}` / `{{#unitOfWork.data}}` (BRA204) | `WF-EVAL` |
+| Workflow run | `type: EVAL` | `workflowrun:complete[:<code>][:<mode>]` (optional) | `{{run.telemetry}}` + `{{run.reference}}` / `{{run.workflowName}}` / `{{run.entityName}}` / `{{run.unitOfWorkName}}` (BRA204) | `WF-EVAL-RUN` |
 
 This skill focuses on **authoring** those workflows in the brain schema. For the
 `set_run_grading` tool contract, see **BRA406**. For the inbox lifecycle after
@@ -32,8 +32,8 @@ For all template tags, see **BRA204**.
 
 ## 1. Manual workflow-run eval (recommended starting point)
 
-Use this when you want an admin to click **Run eval** on a Completed or Failed
-run in the brain UI, rather than grading every run automatically.
+Use this when you want an admin to click **Run eval** on a Completed, Failed,
+or AwaitingInput run in the brain UI, rather than grading every run automatically.
 
 ### 1.1 Frontmatter checklist
 
@@ -43,14 +43,14 @@ Create a markdown file under `workflows/` (e.g. `wf-eval-run.md`):
 ---
 name: Learning Eval (Run)
 code: WF-EVAL-RUN
-type: TRIGGERED
+type: EVAL
 version: 1
 description: Grades a completed workflow run, records the score, and creates inbox learnings.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: <your-system-prompt-workflow-code>
 
-trigger: workflowrun:complete
-trigger-mode: manual
+# Optional — omit for Run eval only. A learning-mode qualifier enables auto:
+# trigger: workflowrun:complete:WF-REVIEW:high
 
 output-tokens: 4096, 8192
 caching: automatic
@@ -66,10 +66,10 @@ tools:
 
 | Field | Required value | Why |
 | --- | --- | --- |
-| `type` | `TRIGGERED` | Eval is event-driven, not a chat session |
-| `trigger` | `workflowrun:complete` | Matches the run-eval Hangfire path (BRA091) |
-| `trigger-mode` | `manual` (or omit — null is treated as manual) | Shows **Run eval** on the run detail page; does **not** auto-enqueue |
-| `tools` | must include `create_inbox_entry` and `set_run_grading` | System tools (BRA405 / BRA406) — in-process |
+| `type` | `EVAL` | Identity — shows **Run eval** and is the enqueue target. Do not use `TRIGGERED` for run evals. |
+| `trigger` | omit, or `workflowrun:complete[:<workflow-code>][:<learning-mode>]` | Automatic only. A `low\|medium\|high` qualifier is what enables auto enqueue. See §2.1. |
+| `trigger-mode` | omit for eval | Inbox-only leftover; ignored for eval |
+| `tools` | must include `create_inbox_entry` and `set_run_grading` | System tools (BRA405 / BRA406) |
 | `max-runs-per-hour` | elevated (e.g. `500`) | Avoids throttling under batch review |
 
 ### 1.2 Instructions body
@@ -100,6 +100,9 @@ Reference (use this exact value for set_run_grading): {{run.reference}}
    - `title`, `body`, `routing_type`
    - optional `status: PROCESSED` when the finding should not fire inbox
      trigger workflows (typical for grade-linked findings)
+   - omit `workflow_name`, `entity_name`, `unit_of_work_name` — the tool fills
+     them from the subject run (workflow code, entity name, unit-of-work title).
+     Those names are also on `{{run.telemetry}}`.
 5. Call `set_run_grading` exactly once with:
    - `run_reference` — the subject reference shown above ({{run.reference}})
    - `grading` — the integer 0–100
@@ -113,7 +116,7 @@ Canonical reference workflow: **`WF-EVAL-RUN`** in `workflows/WF-EVAL-RUN.md`.
 
 #### `create_inbox_entry` (BRA405)
 
-**In-process** via `IInboxService` — no outbound HTTP. Declare under
+Runs inside the brain — no outbound HTTP. Declare under
 `tools/inbox/create-inbox-entry.yml`.
 
 | Parameter | Notes |
@@ -121,6 +124,40 @@ Canonical reference workflow: **`WF-EVAL-RUN`** in `workflows/WF-EVAL-RUN.md`.
 | `title`, `body`, `routing_type` | Required |
 | `source` | Optional producing-system label |
 | `status` | Optional: `PENDING` (default — triggers fire, then auto-`PROCESSED`) or `PROCESSED` (skip triggers) |
+| `workflow_name` | Optional. Subject workflow **code**. When omitted on a run eval, filled from the subject run |
+| `entity_name` | Optional. Entity name. When omitted, filled from the subject run (or the eval run's entity on a unit-of-work eval) |
+| `unit_of_work_name` | Optional. Unit-of-work **title**. When omitted, filled from the subject run (or the eval run's unit of work) |
+
+The same call stores the eval run's entity id and unit-of-work id. The names
+above do not choose the entity. See BRA217 §3b for how a task workflow picks
+that id up.
+
+### 1.4 Getting the learning onto an entity blueprint
+
+A unit-of-work eval already runs with the entity in scope. The inbox entry
+keeps that entity id. The task that should write the entity blueprint has to
+opt in, or it only sees brain blueprints such as `company` and `memory`.
+
+On `WF-REVIEW-BLUEPRINT` (and only that task workflow) set:
+
+```yaml
+scope: inherit-entry
+```
+
+Then deploy. A task run for an entry that has an entity id copies that id, and
+the `projects` blueprint (or whichever blueprint matches the entity type) is
+the one in scope. The run page shows "Inherited from the inbox entry".
+
+Leave the key off `WF-UPDATE-SKILL` and the other task workflows. They stay
+brain-scoped even when the entry names an entity.
+
+If the entry was created before this, or the eval run had no entity, the review
+task stays brain-scoped and the server logs a warning with the entry and the
+task. Do not fix that by typing the entity name on the entry. Run the eval
+again from the scoped unit of work so a new entry is stored with the id.
+
+When the run can see more than one blueprint, pass `blueprint` to
+`add_blueprint_entry`. The scope does not file the learning by itself.
 
 #### `set_run_grading` (BRA406)
 
@@ -139,8 +176,8 @@ Persists the quality score on the **subject** WorkflowRun. Declare under
    uploaded. Bump `version` when changing an existing eval.
 2. Open a **Completed** or **Failed** workflow run in the admin UI
    (`/brains/{instance}/runs/{runId}`).
-3. Click **Run eval** (visible when at least one `workflowrun:complete` workflow
-   with manual / null `trigger-mode` exists).
+3. Click **Run eval** (visible on any evaluable run when the brain has an
+   `EVAL` workflow; hidden on eval runs themselves).
 4. When the eval finishes: learnings appear in the inbox; the run shows a
    traffic-light grade when `set_run_grading` succeeded.
 
@@ -151,24 +188,66 @@ Re-evaluation is allowed — the button can be used again on the same run
 
 ## 2. Automatic workflow-run eval
 
-Same as §1, but set:
+`type: EVAL` is enough for the **Run eval** button on every evaluable run.
+Automatic enqueue is a **learning-mode qualifier** on `trigger`. There is no
+`trigger-mode: automatic` for evals — that field is ignored. Omit `trigger`,
+or leave it unqualified, and the workflow never auto-runs.
 
 ```markdown
-trigger: workflowrun:complete
-trigger-mode: automatic
+# Any completed run, only when the brain is in high learning mode
+trigger: workflowrun:complete:high
 ```
+
+```markdown
+# Only WF-REVIEW, and only at high learning mode
+trigger: workflowrun:complete:WF-REVIEW:high
+```
+
+```markdown
+# Several automatic conditions (OR)
+trigger:
+  - workflowrun:complete:WF-REVIEW:high
+  - workflowrun:complete:WF-CHAT:high
+```
+
+### 2.1 Trigger segments
+
+| Pattern | Subject workflows | Automatic enqueue |
+| --- | --- | --- |
+| *(omit `trigger`)* | — | Never |
+| `workflowrun:complete` | All | Never |
+| `workflowrun:complete:WF-REVIEW` | `WF-REVIEW` only | Never |
+| `workflowrun:complete:high` | All (`*` implied) | When brain mode is `high` |
+| `workflowrun:complete:WF-REVIEW:high` | `WF-REVIEW` only | When brain mode is `high` |
+| `workflowrun:complete:*:high` | All | When brain mode is `high` |
+
+A third segment that is `low`, `medium`, or `high` is the learning-mode
+qualifier — that is what turns auto on. Any other third segment is a workflow
+**code** (manual-only unless you add a fourth-segment qualifier). Use a fourth
+segment when you need both. Multiple YAML list entries are OR. `low|medium|high`
+cannot be a bare third-segment workflow code; write
+`workflowrun:complete:low:high` to mean workflow `low` at high mode.
+
+Learning-mode qualifiers use `off < low < medium < high` (brain mode must meet
+or exceed the qualifier), matching inbox triggers (**BRA217**).
 
 **Behaviour:**
 
 - When a workflow run reaches `Completed` (one-shot finish, session `complete`,
-  or inactivity timeout), every matching **automatic** eval is enqueued.
-- Runs of workflows that themselves have `trigger: workflowrun:complete` are
-  **not** auto-evaluated (prevents eval-of-eval loops).
-- Prefer fixing known issues before enabling automatic mode — continuous evals
-  against an unfixed problem spam the inbox with the same learning.
+  or inactivity timeout), every `EVAL` workflow whose **qualified** pattern
+  matches is enqueued.
+- Runs of `type: EVAL` workflows are **not** auto-evaluated (prevents
+  eval-of-eval loops). The **Run eval** button is also hidden on those runs.
+- Prefer fixing known issues before adding a `:high` (or other) qualifier —
+  continuous evals against an unfixed problem spam the inbox with the same
+  learning.
+- Typical production shape: one `EVAL` workflow, no trigger (button only),
+  then add a qualified line for trusted workflows at `high` when you are
+  ready to auto-eval.
 
-The admin **Run eval** button is driven only by **manual** (or null) evals. You
-may keep both a manual and an automatic eval workflow if you need both paths.
+The admin **Run eval** button shows whenever the brain has an `EVAL` workflow
+and the subject run is not itself an eval. Manual enqueue **ignores** the
+trigger (operator override). `trigger-mode` does not affect either path.
 
 ---
 
@@ -181,15 +260,15 @@ Still supported and independent of run evals:
 code: WF-EVAL
 type: TRIGGERED
 trigger: unitofwork:complete
-# trigger-mode is not used by the UoW Hangfire path today
+# trigger-mode is not used when a unit of work completes
 ---
 ```
 
 Instructions use unit-of-work logs, not OTEL. `set_run_grading` applies to
-**WorkflowRuns** — use it on the run-eval path (`WF-EVAL-RUN`), not the UoW
+**workflow runs** — use it on the run-eval path (`WF-EVAL-RUN`), not the UoW
 convention path, unless you also have a subject run reference.
 
-Enqueued when `POST /units-of-work/{id}/complete` succeeds. The engine looks up
+Starts when `POST /units-of-work/{id}/complete` succeeds. The engine looks up
 workflow code **`WF-EVAL`** by convention. Prefer a separate code
 (`WF-EVAL-RUN`) for run evals so the two paths do not collide.
 
@@ -207,7 +286,7 @@ Unresolvable tags render blank (BRA204 silent-blank contract). Always put the
 telemetry blocks in the Instructions, not only in the short trigger message.
 
 **Important:** `runId` inside `{{run.telemetry}}` is a **shortened Guid**, not
-`WorkflowRuns.Reference`. Always use `{{run.reference}}` for `set_run_grading`.
+the 8-character run reference. Always use `{{run.reference}}` for `set_run_grading`.
 
 ---
 
@@ -244,11 +323,12 @@ Avoid:
 
 | Resource | Role |
 | --- | --- |
-| **BRA201** §8 | Workflow frontmatter (`type`, `trigger`, `trigger-mode`, tools) |
+| **BRA217** | Workflow frontmatter (`type`, `trigger`, `trigger-mode`, tools) |
 | **BRA204** | `run.reference`, `run.telemetry`, `unitOfWork.*` tag taxonomy |
 | **BRA403** | OTEL run telemetry shape; session close → eligible for eval |
 | **BRA404** | Inbox HTTP surface; inbox trigger stages (entry create vs task auto-run) |
-| **BRA405** | Inbox system tools (`create_inbox_entry`, `add_inbox_task`, …) |
+| **BRA405** | Inbox system tools (`create_inbox_entry`, `create_inbox_cluster`, …) |
 | **BRA406** | `set_run_grading` contract and operator surfaces |
-| `workflows/WF-EVAL-RUN.md` | Canonical manual run-eval workflow |
+| **BRA413** | `create_inbox_cluster` — consolidate related inbox entries |
+| `workflows/WF-EVAL-RUN.md` | Canonical `type: EVAL` run-eval workflow |
 | Salesmate `wf-eval.md` / `wf-eval-run.md` | Sample brain copies |

@@ -1,7 +1,7 @@
 ---
 name: Skill Discovery System Tools
 code: BRA411
-version: 1
+version: 2
 description: The in-brain system tools for discovering and loading skills —
   list_skills, find_available_skills and get_skill. list_skills returns the
   full SkillBook catalogue as CSV (code, name, description);
@@ -18,7 +18,7 @@ tools:
 Agents discover procedures by loading skills. These three system tools cover
 **catalogue**, **semantic search**, and **detail** without outbound HTTP.
 
-These are ordinary `system` tools (BRA201 §5.2). Declarations live under
+These are ordinary `system` tools (BRA214). Declarations live under
 `tools/system-tools/` in the brain schema. This skill lists them in frontmatter
 `tools:` so a workflow that keeps them under `available-tools` can promote them
 via `get_skill` (same pattern as BRA405 / BRA408).
@@ -71,7 +71,7 @@ BRA201,Brain Schema,Designing and structuring brain schemas…
 | `name` | `Skills.Title` |
 | `description` | `Skills.Description` (empty string when unset) |
 
-Only **active** skills (`IsDeleted = 0`) are returned, ordered by `code`.
+Only **active** skills are returned, ordered by `code`.
 Embeddings are **not** required — skills without vectors still appear.
 
 ### Errors (plain English)
@@ -114,7 +114,7 @@ unavailable — then prefer `list_skills`.
 | **YAML** | `tools/system-tools/get-skill.yml` |
 
 May promote tools listed in the skill's frontmatter `tools:` into the run when
-those tools are in the workflow's `available-tools` pool (BRA201 §6.3).
+those tools are in the workflow's `available-tools` pool (BRA215).
 
 ---
 
@@ -137,7 +137,7 @@ those tools are in the workflow's `available-tools` pool (BRA201 §6.3).
 
 ## See also
 
-- **BRA201** §5.2 / §6 — system tools and skill file format
+- **BRA214** / §6 — system tools and skill file format
 - **BRA203** — `create_skill` and schema system tools
 - **BRA208** — designing skill books and category ranges
 - **BRA103** — what is a skill book

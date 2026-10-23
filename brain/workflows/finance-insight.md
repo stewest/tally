@@ -6,6 +6,8 @@ description: >-
   category from the organisation's transactions, then writes it back to the app.
 version: 1
 type: RUNNABLE
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 system-prompt-code: WF-SYSTEM-PROMPT
