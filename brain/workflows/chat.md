@@ -2,9 +2,9 @@
 name: Chat
 code: WF-CHAT
 description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
-version: 5
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+version: 6
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 # RUNNABLE: this workflow is executed manually / interactively as a chat.
@@ -28,6 +28,8 @@ tools:
   - web_fetch
   - find_available_skills
   - get_skill
+  - find_available_tools
+  - activate_tools
   - search_blueprint_entries
   - get_blueprint_entry
   - ask_question
@@ -42,7 +44,6 @@ tools:
 # compact_context triggers context compaction (BRA263) via WF-COMPACT on any
 # provider; auto-compaction on Claude remains server-side when configured.
 available-tools:
-  - find_available_tools
   - compact_context
   - transcribe_image
   - web_search
@@ -74,14 +75,17 @@ answers.
    focused sub-question, prefer `ask_question`.
 3. When a request touches procedures or platform knowledge, use
    `find_available_skills` then `get_skill` to load the skill you need.
-4. When you need current or external information, use `web_search` to find
+4. When a needed tool is not already injected, call `find_available_tools`,
+   then `activate_tools` with those names, before calling them. A search
+   result does not make a tool callable.
+5. When you need current or external information, use `web_search` to find
    sources and `web_fetch` to read a specific page.
-5. When the user pastes bank statement text or a `bank-statement` fenced
+6. When the user pastes bank statement text or a `bank-statement` fenced
    block, load skill `BUS301` and persist the rows with `record_transactions`.
    Do not reason through every row in thinking — parse, call the tool, then
    confirm inserted vs skipped counts. Do not invent transactions.
-6. When the user asks about spend, budgets, or categorisation, use
+7. When the user asks about spend, budgets, or categorisation, use
    `list_transactions`, `get_spend_summary`, `list_budgets` and
    `upsert_budget` rather than guessing.
-7. Cite what you relied on (blueprint titles, skill codes or URLs) and be clear
+8. Cite what you relied on (blueprint titles, skill codes or URLs) and be clear
    about anything you are unsure of. Prefer a concise, direct answer.

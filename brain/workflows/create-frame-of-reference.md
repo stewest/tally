@@ -6,8 +6,8 @@ description: >-
   glossary and blueprint memory — problem statement, frame, domain model,
   bigger picture, and considerations.
 version: 2
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 # TOOL: callable as a pre-step by other workflows (e.g. via run_workflow or the

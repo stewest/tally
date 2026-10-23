@@ -6,8 +6,8 @@ description: >-
   Centre skill, proposes a plan, and creates or updates tasks only after the
   operator accepts. Does not write schema.
 version: 1
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 type: RUNNABLE
 system-prompt-code: WF-SYSTEM-PROMPT

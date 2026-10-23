@@ -33,7 +33,7 @@ Full local stack behaviour: skill **BRA106** (`skills/telos-brain/concepts/BRA10
 
 ## Preview and production (Telos Hosted)
 
-Vercel deploys this schema on every Preview and Production build (`npm run brain:deploy` from the repo root), next to Drizzle migrate. Set `TELOS_BRAIN_ORG_API_KEY`, `ANTHROPIC_API_KEY`, and `TOOL_API_KEY` on each Vercel environment. `VOYAGE_API_KEY` is optional at deploy (embeddings skipped if unset). Optional: `OPENROUTER_API_KEY`, `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT`, `OPENAI_API_KEY`, `XAI_API_KEY`, `DEFAULT_LLM_MODEL`. Preview defaults to instance `{project}-preview` (`--env stage`); Production to `{project}-prod` (`--env prod`). Override with `BRAIN_INSTANCE`.
+Vercel deploys this schema on every Preview and Production build (`npm run brain:deploy` from the repo root), next to Drizzle migrate. Set `TELOS_BRAIN_ORG_API_KEY`, `ANTHROPIC_API_KEY`, and `TOOL_API_KEY` on each Vercel environment. `VOYAGE_API_KEY` is optional at deploy (embeddings skipped if unset). To embed on a local runner instead, set `embedding-model: local_1/<model>` and `LOCAL_LLM_1_BASE_URL`. Optional: `OPENROUTER_API_KEY`, `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT`, `OPENAI_API_KEY`, `XAI_API_KEY`, `DEFAULT_LLM_MODEL`. Preview defaults to instance `{project}-preview` (`--env stage`); Production to `{project}-prod` (`--env prod`). Override with `BRAIN_INSTANCE`.
 
 The script copies `.env.example` to `.env.stage` / `.env.prod` so declared keys exist; Vercel secrets override placeholders. It merges the current app hostname into `allowed-callback-domains` (exact hosts only — no wildcards). Add a stable custom domain to `brain-compose.yml` as well.
 

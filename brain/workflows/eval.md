@@ -2,8 +2,8 @@
 name: Learning Eval (Run)
 code: WF-EVAL-RUN
 version: 7
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 type: EVAL
 description: >-

@@ -34,7 +34,7 @@ npm install
 
 You can run the same flow later with `npm run prepare`. Skip it with `TEL_SKIP_PREPARE=1` (CI skips automatically). `npm run stack:reset` stops this repo's local Brain (and deletes its Docker SQL volume) and this project's Supabase. It does not stop other Compose stacks. Then `npm run prepare` to start clean.
 
-Then fill `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and any remaining `MY_APP_*` values in `brain/.env.local`. Optionally set `OPENROUTER_API_KEY`, `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT`, `OPENAI_API_KEY`, `XAI_API_KEY`, `LOCAL_LLM_1_BASE_URL`, or `DEFAULT_LLM_MODEL` (BRA210). Do not commit `.env` files.
+Then fill `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and any remaining `MY_APP_*` values in `brain/.env.local`. Optionally set `OPENROUTER_API_KEY`, `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT`, `OPENAI_API_KEY`, `XAI_API_KEY`, `LOCAL_LLM_1_BASE_URL`, or `DEFAULT_LLM_MODEL` for workflows that omit `model:` (BRA210). Do not commit `.env` files.
 
 Optional app vars (already defaulted in code):
 
@@ -94,7 +94,8 @@ VOYAGE_API_KEY=your-voyage-api-key
 MY_APP_API_URL=http://host.docker.internal:3000
 # MY_APP_API_KEY and BRAIN_API_KEY are already set by npm prepare script.
 
-# Optional — point every workflow at one provider/model (BRA210):
+# Optional — brain default for workflows that omit model: (BRA210).
+# Workflows in this template set model:, so this does not override those pins.
 # OPENROUTER_API_KEY=
 # DEFAULT_LLM_MODEL=openrouter/anthropic/claude-sonnet-4.6
 # DEFAULT_LLM_MODEL=openrouter/auto
@@ -105,7 +106,7 @@ MY_APP_API_URL=http://host.docker.internal:3000
 # DEFAULT_LLM_MODEL=local_1/qwen3:8b
 ```
 
-Workflows pin Anthropic so a brain with only `ANTHROPIC_API_KEY` still runs. A reachable brain default (`DEFAULT_LLM_MODEL`, Settings **Default LLM model**, or compose `llm-model`) overrides those pins. On Telos Hosted you can set compose `llm-model: telosbrain/xai/grok-4.6` (no provider key; billed at 2× the official xAI grok-4.6 rate on organisation brain credit — BRA210 / BRA301). TALLY leaves that commented. It is unavailable on local Docker. After changing models or local-runner URLs, redeploy. From Brain-in-Docker, Ollama on the host must use `host.docker.internal`, not `localhost`. Voyage is still needed for semantic search — a local LLM does not replace it. Deploy succeeds without `VOYAGE_API_KEY`; embeddings are skipped.
+Workflows pin Anthropic so a brain with only `ANTHROPIC_API_KEY` still runs. That pin is the whole run. `DEFAULT_LLM_MODEL`, Settings, and compose `llm-model` apply only to a workflow that omits `model:` (BRA210). Delete the pin to follow the brain default. On Telos Hosted you can set compose `llm-model: telosbrain/xai/grok-4.6` (no provider key; billed at 2× the official xAI grok-4.6 rate on organisation brain credit — BRA210 / BRA212). TALLY leaves that commented. It is unavailable on local Docker. After changing models or local-runner URLs, redeploy. From Brain-in-Docker, Ollama on the host must use `host.docker.internal`, not `localhost`. Semantic search uses `embedding-model` (default `voyage-3-lite`, which needs `VOYAGE_API_KEY`). A local runner can embed instead: set `embedding-model` to `local_1/<model>` (for example `local_1/nomic-embed-text`) and `LOCAL_LLM_1_BASE_URL`. Deploy succeeds without an embedding key; embeddings are skipped.
 
 Leave the `TELOS_*` values that `brain start` wrote — they are the well-known local org key and `http://127.0.0.1:60061`. `TELOS_*` is CLI config only; it is never uploaded to the brain.
 
@@ -197,12 +198,12 @@ Set these on **Production** and **Preview** (different values, like `POSTGRES_UR
 | Variable | Purpose |
 |---|---|
 | `TELOS_BRAIN_ORG_API_KEY` | Org key from go.telosbrain.com (CLI only, never uploaded to the brain) |
-| `ANTHROPIC_API_KEY` | Required for the workflow `model:` pins unless a reachable brain default is set |
-| `VOYAGE_API_KEY` | Optional at deploy (`voyage-3-lite` embeddings; skipped if unset) |
+| `ANTHROPIC_API_KEY` | Required. Workflows pin `anthropic/…`, and that pin is the whole run |
+| `VOYAGE_API_KEY` | Optional at deploy (default `voyage-3-lite`; embeddings skipped if unset). Or set `embedding-model` to `local_1/<model>` and `LOCAL_LLM_1_BASE_URL` |
 | `OPENROUTER_API_KEY` | Optional. For `openrouter/…` or `openrouter/auto` |
 | `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` | Optional. For `azure/<deployment>` (optional `AZURE_OPENAI_API_VERSION`) |
 | `OPENAI_API_KEY` / `XAI_API_KEY` | Optional. For `openai/…` or `xai/…` models |
-| `DEFAULT_LLM_MODEL` | Optional. e.g. `openrouter/auto` or `azure/gpt-4o-prod` — overrides workflow pins when the matching key exists |
+| `DEFAULT_LLM_MODEL` | Optional. Brain default for workflows that omit `model:`. Does not override a workflow pin (BRA210) |
 | `TOOL_API_KEY` | Shared tool handshake; copied to `MY_APP_API_KEY` on deploy |
 | `BRAIN_URL` | Optional if `TELOS_BRAIN_API_URL` is set. App-side Execution API: `https://go.telosbrain.com` |
 | `BRAIN_API_KEY` | Per-brain execution key. Written by the [Telos Brain integration](https://vercel.com/integrations/telos-brain), or paste from the first hosted deploy log |

@@ -5,9 +5,9 @@ description: >-
   Applies one blueprint memory write from a review_blueprint inbox task —
   searches for a close match, then either merges into an existing entry or
   creates a new one. Never both.
-version: 6
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+version: 7
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 
 # Tasks are created by WF-EVAL / WF-TRIAGE via add_inbox_task with
@@ -17,6 +17,9 @@ model: anthropic/claude-sonnet-4-6
 # that arrive already classified as memory learnings.
 type: TRIGGERED
 trigger: inbox:MEMORY_UPDATE:low
+# Copies the inbox entry's entity and unit-of-work ids onto this task run
+# (BRA217 §3b). Leave this off every other task workflow.
+scope: inherit-entry
 
 system-prompt-code: WF-SYSTEM-PROMPT
 

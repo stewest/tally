@@ -2,8 +2,8 @@
 name: Simulate Tool Response
 code: WF-SIM
 version: 2
-# Fallback when no brain default is set. Settings / DEFAULT_LLM_MODEL /
-# compose llm-model wins when that credential exists (BRA210).
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 type: SIMULATION
 description: Synthesises a plausible tool response from historical sample call/response pairs for simulation runs.
