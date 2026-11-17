@@ -1,11 +1,14 @@
 import { withOrgContext } from "@db/index";
 import { Budget, BudgetPeriod, budgets, transactions } from "@db/schema";
 import {
+  canonicaliseCategory,
+  categoryLookupValues,
   DEFAULT_CURRENCY,
   normaliseMoneyAmount,
   type BudgetProgress,
 } from "@/lib/finance";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { mergeStoredCategoryAliases } from "@/server/finance/transactions";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 export type { BudgetProgress };
 
@@ -83,20 +86,25 @@ export function currentPeriodWindow(
 }
 
 export async function listBudgets(organisationId: string): Promise<Budget[]> {
-  return withOrgContext(organisationId, tx =>
-    tx
+  return withOrgContext(organisationId, async tx => {
+    await mergeStoredCategoryAliases(tx, organisationId);
+    const rows = await tx
       .select()
       .from(budgets)
       .where(eq(budgets.organisationId, organisationId))
-      .orderBy(budgets.category, budgets.startsOn)
-  );
+      .orderBy(budgets.category, budgets.startsOn);
+    return rows.map(row => ({
+      ...row,
+      category: canonicaliseCategory(row.category) ?? row.category,
+    }));
+  });
 }
 
 export async function upsertBudget(
   organisationId: string,
   input: UpsertBudgetInput
 ): Promise<Budget> {
-  const category = input.category.trim();
+  const category = canonicaliseCategory(input.category);
   if (!category) {
     throw new Error("category is required.");
   }
@@ -120,6 +128,7 @@ export async function upsertBudget(
   };
 
   return withOrgContext(organisationId, async tx => {
+    await mergeStoredCategoryAliases(tx, organisationId);
     const [row] = await tx
       .insert(budgets)
       .values(values)
@@ -154,6 +163,7 @@ export async function updateBudget(
   input: Partial<UpsertBudgetInput>
 ): Promise<Budget | null> {
   return withOrgContext(organisationId, async tx => {
+    await mergeStoredCategoryAliases(tx, organisationId);
     const [existing] = await tx
       .select()
       .from(budgets)
@@ -177,7 +187,10 @@ export async function updateBudget(
     const [updated] = await tx
       .update(budgets)
       .set({
-        category: input.category?.trim() || existing.category,
+        category:
+          input.category !== undefined
+            ? canonicaliseCategory(input.category) ?? existing.category
+            : canonicaliseCategory(existing.category) ?? existing.category,
         period: input.period ?? existing.period,
         amount:
           input.amount !== undefined
@@ -215,6 +228,7 @@ export async function getBudgetProgress(
   organisationId: string
 ): Promise<BudgetProgress[]> {
   return withOrgContext(organisationId, async tx => {
+    await mergeStoredCategoryAliases(tx, organisationId);
     const orgBudgets = await tx
       .select()
       .from(budgets)
@@ -240,7 +254,7 @@ export async function getBudgetProgress(
         .where(
           and(
             eq(transactions.organisationId, organisationId),
-            eq(transactions.category, budget.category),
+            inArray(transactions.category, categoryLookupValues(budget.category)),
             gte(transactions.occurredAt, window.start),
             lte(transactions.occurredAt, window.end)
           )
@@ -255,6 +269,7 @@ export async function getBudgetProgress(
 
       progress.push({
         ...budget,
+        category: canonicaliseCategory(budget.category) ?? budget.category,
         periodStart: window.start,
         periodEnd: window.end,
         spent,

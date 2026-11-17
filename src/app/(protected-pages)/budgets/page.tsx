@@ -10,7 +10,12 @@ import { Icon } from "@/components/ui/Icon";
 import { usePageLayout } from "@/hooks/usePageLayout";
 import { useDeleteBudget, useUpdateBudget, useUpsertBudget } from "@/hooks/useBudgets";
 import { useFinanceSummary } from "@/hooks/useFinanceSummary";
-import { BUDGET_PERIOD_LABELS, groupBudgetsByCategory } from "@/lib/finance";
+import { useTransactionCategories } from "@/hooks/useTransactions";
+import {
+  BUDGET_PERIOD_LABELS,
+  groupBudgetsByCategory,
+  TRANSACTION_CATEGORIES,
+} from "@/lib/finance";
 import { formatCurrency } from "@/lib/utils";
 import RowActionMenu from "@/components/ui/RowActionMenu";
 import type { BudgetFormValues } from "@/app/types/form-validation";
@@ -23,6 +28,8 @@ export default function BudgetsPage() {
   const [editing, setEditing] = useState<Budget | null>(null);
 
   const summary = useFinanceSummary();
+  const { data: categoryOptions = [...TRANSACTION_CATEGORIES] } =
+    useTransactionCategories();
   const upsertBudget = useUpsertBudget();
   const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
@@ -165,6 +172,7 @@ export default function BudgetsPage() {
       {isCreateOpen && (
         <Modal title="Add budget" onClose={() => setIsCreateOpen(false)}>
           <BudgetForm
+            categories={categoryOptions}
             onSubmit={data => {
               void handleCreate(data);
             }}
@@ -177,6 +185,7 @@ export default function BudgetsPage() {
       {editing && (
         <Modal title="Edit budget" onClose={() => setEditing(null)}>
           <BudgetForm
+            categories={categoryOptions}
             defaultValues={{
               category: editing.category,
               period: editing.period,

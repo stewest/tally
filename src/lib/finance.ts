@@ -21,6 +21,7 @@ export const TRANSACTION_CATEGORIES = [
   "Utilities",
   "Entertainment",
   "Dining",
+  "Giving",
   "Health",
   "Insurance",
   "Savings",
@@ -30,6 +31,36 @@ export const TRANSACTION_CATEGORIES = [
 ] as const;
 
 export type TransactionCategory = (typeof TRANSACTION_CATEGORIES)[number];
+
+/** Retired labels that must roll up into one dropdown category. */
+export const CATEGORY_ALIASES: Record<string, TransactionCategory> = {
+  "Giving & Donations": "Giving",
+  Donations: "Giving",
+  "Dining & Drinks": "Dining",
+};
+
+export function canonicaliseCategory(
+  value: string | null | undefined
+): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const needle = trimmed.toLowerCase();
+  const alias = Object.entries(CATEGORY_ALIASES).find(
+    ([name]) => name.toLowerCase() === needle
+  );
+  return alias ? alias[1] : trimmed;
+}
+
+/** Stored labels that belong to the same category, including retired names. */
+export function categoryLookupValues(category: string): string[] {
+  const trimmed = category.trim();
+  const canonical = canonicaliseCategory(trimmed) ?? trimmed;
+  const aliases = Object.entries(CATEGORY_ALIASES)
+    .filter(([, target]) => target === canonical)
+    .map(([alias]) => alias);
+  return [...new Set([canonical, trimmed, ...aliases].filter(name => name.length > 0))];
+}
 
 export const BUDGET_PERIODS: BudgetPeriod[] = [
   "weekly",
@@ -52,7 +83,7 @@ export function groupBudgetsByCategory<
 >(rows: readonly T[]): { category: string; budgets: T[] }[] {
   const groups = new Map<string, T[]>();
   for (const row of rows) {
-    const category = row.category.trim() || "Uncategorised";
+    const category = canonicaliseCategory(row.category) ?? "Uncategorised";
     const list = groups.get(category) ?? [];
     list.push(row);
     groups.set(category, list);
@@ -72,6 +103,36 @@ export function groupBudgetsByCategory<
 }
 
 export const DEFAULT_CURRENCY = "NZD";
+
+export function uniqueSortedCategories(
+  values: Iterable<string | null | undefined>
+): string[] {
+  const names = new Set<string>();
+  for (const value of values) {
+    const canonical = canonicaliseCategory(value);
+    if (canonical) names.add(canonical);
+  }
+  return [...names].sort((left, right) => left.localeCompare(right, "en"));
+}
+
+/** Category names from a Brain Category Taxonomy markdown table. */
+export function parseCategoryTaxonomyTable(markdown: string): string[] {
+  const names: string[] = [];
+  for (const line of markdown.split("\n")) {
+    const match = line.match(/^\|\s*([^|]+?)\s*\|/);
+    if (!match) continue;
+    const name = match[1].trim();
+    if (
+      !name ||
+      name.toLowerCase() === "category" ||
+      /^[-:]+$/.test(name.replace(/\s/g, ""))
+    ) {
+      continue;
+    }
+    names.push(name);
+  }
+  return uniqueSortedCategories(names);
+}
 
 export function isTransactionCategory(
   value: string

@@ -10,9 +10,10 @@ import {
   TransactionFormValues,
   TransactionSchema,
 } from "@/app/types/form-validation";
-import { TRANSACTION_CATEGORIES } from "@/lib/finance";
+import { canonicaliseCategory, TRANSACTION_CATEGORIES } from "@/lib/finance";
 
 interface TransactionFormProps {
+  categories?: readonly string[];
   defaultValues?: Partial<TransactionFormValues>;
   submitLabel?: string;
   isSubmitting?: boolean;
@@ -21,6 +22,7 @@ interface TransactionFormProps {
 }
 
 export default function TransactionForm({
+  categories = TRANSACTION_CATEGORIES,
   defaultValues,
   submitLabel = "Save transaction",
   isSubmitting = false,
@@ -47,17 +49,19 @@ export default function TransactionForm({
   });
 
   const onSubmitForm: SubmitHandler<TransactionFormValues> = data => {
-    onSubmit(data);
+    onSubmit({
+      ...data,
+      category: canonicaliseCategory(data.category) ?? "",
+    });
   };
 
-  const selectedCategory = watch("category") ?? "";
+  const selectedCategory = canonicaliseCategory(watch("category")) ?? "";
   const categoryOptions = [
-    ...TRANSACTION_CATEGORIES.map(category => ({
+    ...categories.map(category => ({
       value: category,
       label: category,
     })),
-    ...(selectedCategory &&
-    !(TRANSACTION_CATEGORIES as readonly string[]).includes(selectedCategory)
+    ...(selectedCategory && !categories.includes(selectedCategory)
       ? [{ value: selectedCategory, label: selectedCategory }]
       : []),
   ];

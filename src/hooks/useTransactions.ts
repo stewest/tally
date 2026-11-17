@@ -10,6 +10,23 @@ export interface TransactionListFilters {
   search?: string;
 }
 
+export function useTransactionCategories() {
+  return useQuery({
+    queryKey: ["transactionCategories"],
+    queryFn: async () => {
+      const response = await axios.get<ListTransactionCategoriesResponse>(
+        "/api/finance/categories"
+      );
+      if (!response.data.success) {
+        throw new Error(
+          response.data.error || "Failed to fetch transaction categories"
+        );
+      }
+      return response.data.data || [];
+    },
+  });
+}
+
 export function useTransactions(filters: TransactionListFilters = {}) {
   return useQuery({
     queryKey: ["transactions", filters],
@@ -43,6 +60,7 @@ export function useCreateTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactionCategories"] });
       queryClient.invalidateQueries({ queryKey: ["financeSummary"] });
       addToast("Transaction added", "success");
     },
@@ -72,6 +90,7 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactionCategories"] });
       queryClient.invalidateQueries({ queryKey: ["financeSummary"] });
       addToast("Transaction updated", "success");
     },
@@ -96,6 +115,7 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactionCategories"] });
       queryClient.invalidateQueries({ queryKey: ["financeSummary"] });
       addToast("Transaction deleted", "success");
     },

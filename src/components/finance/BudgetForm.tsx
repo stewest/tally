@@ -13,10 +13,12 @@ import {
 import {
   BUDGET_PERIOD_LABELS,
   BUDGET_PERIODS,
+  canonicaliseCategory,
   TRANSACTION_CATEGORIES,
 } from "@/lib/finance";
 
 interface BudgetFormProps {
+  categories?: readonly string[];
   defaultValues?: Partial<BudgetFormValues>;
   submitLabel?: string;
   isSubmitting?: boolean;
@@ -25,6 +27,7 @@ interface BudgetFormProps {
 }
 
 export default function BudgetForm({
+  categories = TRANSACTION_CATEGORIES,
   defaultValues,
   submitLabel = "Save budget",
   isSubmitting = false,
@@ -39,7 +42,10 @@ export default function BudgetForm({
     resolver: yupResolver(BudgetSchema),
     mode: "onChange",
     defaultValues: {
-      category: defaultValues?.category ?? "Groceries",
+      category:
+        canonicaliseCategory(defaultValues?.category) ??
+        defaultValues?.category ??
+        "Groceries",
       period: defaultValues?.period ?? "monthly",
       amount: defaultValues?.amount ?? "",
       startsOn: defaultValues?.startsOn ?? "",
@@ -49,7 +55,10 @@ export default function BudgetForm({
   });
 
   const onSubmitForm: SubmitHandler<BudgetFormValues> = data => {
-    onSubmit(data);
+    onSubmit({
+      ...data,
+      category: canonicaliseCategory(data.category) ?? data.category,
+    });
   };
 
   return (
@@ -59,7 +68,7 @@ export default function BudgetForm({
         label="Category"
         name="category"
         defaultValue="Select a category"
-        options={TRANSACTION_CATEGORIES.map(category => ({
+        options={categories.map(category => ({
           value: category,
           label: category,
         }))}

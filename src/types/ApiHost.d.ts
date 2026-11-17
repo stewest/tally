@@ -325,6 +325,12 @@ declare global {
     error?: string;
   }
 
+  interface ListTransactionCategoriesResponse {
+    success: boolean;
+    data?: string[];
+    error?: string;
+  }
+
   interface CreateTransactionRequest {
     occurredAt: string;
     description: string;

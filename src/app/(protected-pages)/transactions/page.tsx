@@ -13,6 +13,7 @@ import { usePageLayout } from "@/hooks/usePageLayout";
 import {
   useCreateTransaction,
   useDeleteTransaction,
+  useTransactionCategories,
   useTransactions,
   useUpdateTransaction,
 } from "@/hooks/useTransactions";
@@ -41,6 +42,8 @@ export default function TransactionsPage() {
   );
 
   const { data: transactions = [], isLoading } = useTransactions(filters);
+  const { data: categoryOptions = [...TRANSACTION_CATEGORIES] } =
+    useTransactionCategories();
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
   const deleteTransaction = useDeleteTransaction();
@@ -200,7 +203,7 @@ export default function TransactionsPage() {
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-black"
           >
             <option value="">All categories</option>
-            {TRANSACTION_CATEGORIES.map(item => (
+            {categoryOptions.map(item => (
               <option key={item} value={item}>
                 {item}
               </option>
@@ -229,6 +232,7 @@ export default function TransactionsPage() {
       {isCreateOpen && (
         <Modal title="Add transaction" onClose={() => setIsCreateOpen(false)}>
           <TransactionForm
+            categories={categoryOptions}
             onSubmit={data => {
               void handleCreate(data);
             }}
@@ -241,6 +245,7 @@ export default function TransactionsPage() {
       {editing && (
         <Modal title="Edit transaction" onClose={() => setEditing(null)}>
           <TransactionForm
+            categories={categoryOptions}
             defaultValues={{
               occurredAt: editing.occurredAt,
               description: editing.description,
