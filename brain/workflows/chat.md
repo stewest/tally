@@ -2,7 +2,7 @@
 name: Chat
 code: WF-CHAT
 type: RUNNABLE
-version: 5
+version: 6
 description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
@@ -41,6 +41,7 @@ available-skills:
   - BRA201
   - BRA203
   - BUS301
+  - BUS404
 ---
 
 # Instructions

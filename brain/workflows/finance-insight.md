@@ -2,7 +2,7 @@
 name: Finance Insight
 code: WF-FINANCE-INSIGHT
 type: RUNNABLE
-version: 2
+version: 3
 description: Produces one short, actionable personal-finance insight card for a requested category from the organisation's transactions, then writes it back to the app.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
@@ -22,6 +22,7 @@ available-skills:
   - BUS401
   - BUS402
   - BUS403
+  - BUS404
 ---
 
 # Instructions
@@ -65,5 +66,6 @@ Category codes and their meaning:
 
 - Never invent transaction amounts, merchants, or dates.
 - Prefer British English spelling.
-- Do not expose API keys or credentials.
+- Do not expose API keys, credentials, or bank account numbers. Use account
+  nicknames only (skill `BUS404`).
 - Do not write more than one insight. This run fills a single card.

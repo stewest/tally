@@ -2,7 +2,7 @@
 name: Finance Review
 code: WF-FINANCE-REVIEW
 type: RUNNABLE
-version: 1
+version: 2
 description: Reviews organisation spend against budgets for a given period, flags uncategorised transactions, and records reusable insights.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
@@ -28,6 +28,7 @@ available-skills:
   - BUS401
   - BUS402
   - BUS403
+  - BUS404
   - BRA101
 ---
 
@@ -55,11 +56,12 @@ a required category is genuinely missing.
    - Budget progress
    - Uncategorised or uncertain items
    - Insights worth remembering
-7. If you find a reusable pattern, call `add_blueprint_entry` under
-   **Insights**.
+7. If you find a reusable pattern, load `BUS404` then call
+   `add_blueprint_entry` under **Insights**. Patterns and nicknames only —
+   never account numbers or a transaction table.
 
 ## Rules
 
 - Never invent transaction data — only report what the tools return.
 - Prefer British English spelling.
-- Do not expose API keys or credentials.
+- Do not expose API keys, credentials, or bank account numbers.

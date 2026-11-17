@@ -2,7 +2,7 @@
 name: Daily Finance Insights
 code: WF-FINANCE-DAILY
 type: RUNNABLE
-version: 5
+version: 6
 description: Daily heartbeat that reviews organisation transactions and writes one Insights card per personal-finance skill that has a concrete finding.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
@@ -23,6 +23,7 @@ available-skills:
   - BUS401
   - BUS402
   - BUS403
+  - BUS404
 ---
 
 # Instructions
@@ -60,7 +61,8 @@ this workflow once per organisation entity (Vercel cron or a local POST to
 
 - Never invent transaction amounts, merchants, or dates.
 - Prefer British English spelling.
-- Do not expose API keys or credentials.
+- Do not expose API keys, credentials, or bank account numbers. Use account
+  nicknames only (skill `BUS404`).
 - At most one `create_insight` call per category in this run.
 - Do not repeat insights. Only create a card when the finding is new — not
   already captured in a recent insight for that category.

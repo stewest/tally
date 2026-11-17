@@ -1,9 +1,11 @@
 name: Personal Finance
-version: 1
+version: 2
 scope: brain
 categories:
   - name: Categories
     description: Transaction category taxonomy and categorisation rules.
+  - name: Accounts
+    description: Account nicknames and import rules. Never store account numbers here.
   - name: Budgeting
     description: Budget targets, spending limits, and review cadence.
   - name: Insights

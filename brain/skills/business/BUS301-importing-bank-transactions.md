@@ -1,7 +1,7 @@
 ---
 name: Importing Bank Transactions
 code: BUS301
-version: 6
+version: 7
 description: How to import bank statements — parsing pasted or uploaded text, sequencing multi-account imports, applying batch limits, and persisting transactions with finance host tools.
 tools:
   - record_transactions
@@ -59,3 +59,5 @@ When a statement covers more than one account:
 - Dates must be `YYYY-MM-DD` when calling tools.
 - Do not walk through every row in thinking — it burns the output budget.
 - Do not expose API keys or raw tool errors to the user.
+- Pass `account` as a nickname from Account Type Rules. Do not write account
+  numbers into chat, blueprints, or schema files (skill `BUS404`).

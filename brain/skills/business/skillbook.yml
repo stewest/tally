@@ -4,7 +4,7 @@ name: Business
 description: >-
   Starter skillbook for small-business operations — sales, customer management,
   operations, finance, and general skills.
-version: 3
+version: 4
 categories:
   - name: Sales
     description: Sales processes, lead management and conversion
@@ -23,6 +23,7 @@ categories:
       - ./BUS401-spending-breakdown-and-trends.md
       - ./BUS402-budget-and-goal-alerts.md
       - ./BUS403-anomalies-and-optimisation.md
+      - ./BUS404-financial-memory-hygiene.md
   - name: General
     description: General skills that span multiple areas
     index: 500

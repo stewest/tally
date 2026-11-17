@@ -2,7 +2,7 @@
 name: Review Blueprint
 code: WF-REVIEW-BLUEPRINT
 type: TRIGGERED
-version: 3
+version: 4
 description: Applies one blueprint memory write from a review_blueprint inbox task — searches for a close match, then either merges into an existing entry or creates a new one. Never both.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
@@ -104,3 +104,5 @@ the task instructions remain authoritative for category and concept.
 - Prefer a missed write over inventing facts not supported by the task /
   entry
 - Do not edit skills, workflows, tools, or inbox status
+- Strip bank account numbers, card numbers, IRD/tax IDs, and statement
+  ledgers from content before writing. Use account nicknames only.

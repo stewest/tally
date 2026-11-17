@@ -1,7 +1,6 @@
 name: Company
-scope:
-  type: brain
-  code: null
+version: 1
+scope: brain
 categories:
   - name: Business Concepts
     description: Domain concepts and terminology specific to this business
