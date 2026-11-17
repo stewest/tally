@@ -1,48 +1,32 @@
 ---
 name: Update Brain
 code: WF-UPDATE-BRAIN
-description: >-
-  Autonomously self-heals and self-manages the brain: subagents (TOOL workflows
-  exposed as workflow tools), wiring, and other structural schema fixes outside
-  skill-craft and simple workflow/tool edits. High learning mode and inbox
-  weight 5 or higher.
-version: 11
-# This list is the whole run. A brain default does not override it (BRA210).
-# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
-model: anthropic/claude-sonnet-4-6
-# :high:5 gates Stage 1 (task create) and Stage 2 (auto-run on the parent
-# entry's current Weight). Below weight 5, triage-created tasks park at
-# AWAITING_APPROVAL for manual processing. Keep SYSTEM_CHANGE (not
-# inbox:*) so Stage 1 does not attach this workflow to every high-weight
-# entry.
 type: TRIGGERED
-trigger: inbox:SYSTEM_CHANGE:high:5
-
+version: 11
+description: "Autonomously self-heals and self-manages the brain: subagents (TOOL workflows exposed as workflow tools), wiring, and other structural schema fixes outside skill-craft and simple workflow/tool edits. High learning mode and inbox weight 5 or higher."
+model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-BRAIN-SYSTEM
-
-output-tokens: 4096, 8192, 16384
+trigger: inbox:SYSTEM_CHANGE:high:5
+auto-compaction: 100000
+output-tokens: "4096,8192,16384"
 caching: automatic
 max-turns: 50
 thinking: adaptive
-auto-compaction: 100000
 max-runs-per-hour: 100
-
 tools:
-  - find_available_skills
-  - get_skill
-  - find_available_tools
   - activate_tools
-  - list_schema_files
-  - search_schema_files
-  - get_schema_file
-  - update_schema_file
   - create_schema_file
   - create_skill
+  - find_available_skills
+  - find_available_tools
+  - get_schema_file
+  - get_skill
+  - list_schema_files
+  - search_schema_files
   - update_inbox_entry
-
+  - update_schema_file
 injected-skills:
   - BRA105
-
 available-skills:
   - BRA101
   - BRA103

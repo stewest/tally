@@ -213,7 +213,7 @@ Set these on **Production** and **Preview** (different values, like `POSTGRES_UR
 | `TELOS_BRAIN_API_URL` | Written by the [Telos Brain integration](https://vercel.com/integrations/telos-brain). Also used as the CLI deploy destination (default `https://go.telosbrain.com`) |
 | `BRAIN_CALLBACK_DOMAIN` | Optional extra hostname merged into `allowed-callback-domains` |
 | `BRAIN_DEPLOY` | Set to `0` to skip Brain deploy (app + Drizzle still deploy) |
-| `CRON_SECRET` | **Required on Preview and Production.** Authorises `GET /api/cron/daily-insights`. Vercel cron sends `Authorization: Bearer <CRON_SECRET>`. Without it the hosted job returns 401 and never starts Brain runs. Locally you can use `BRAIN_API_KEY` as the bearer token. Vercel Hobby does not execute `vercel.json` crons — use local curl or Brain UI Run. |
+| `CRON_SECRET` | **Required on Preview and Production.** Authorises `GET /api/cron/daily-insights` (monthly, 1st of the month 07:00 UTC). Vercel cron sends `Authorization: Bearer <CRON_SECRET>`. Without it the hosted job returns 401 and never starts Brain runs. Locally you can use `BRAIN_API_KEY` as the bearer token. Vercel Hobby does not execute `vercel.json` crons — use local curl or Brain UI Run. |
 
 Also set Clerk, Supabase, and `NEXT_PUBLIC_SITE_URL` per environment. Keep `TOOL_API_KEY` / `MY_APP_API_KEY` and `BRAIN_API_KEY` in sync per environment. Preview and Production **must** use different `BRAIN_INSTANCE` names (the defaults already do). Do not reuse `local-brain`.
 

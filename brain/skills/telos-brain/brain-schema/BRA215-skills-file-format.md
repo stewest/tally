@@ -2,10 +2,7 @@
 name: Skills File Format
 code: BRA215
 version: 1
-description: How to author skillbook.yml and skill markdown files — categories,
-  skill codes, frontmatter, and skill-declared tools for mid-run promotion.
-  Load this when creating or editing a skill file. For category design and
-  ranges see BRA208.
+description: How to author skillbook.yml and skill markdown files — categories, skill codes, frontmatter, and skill-declared tools for mid-run promotion. Load this when creating or editing a skill file. For category design and ranges see BRA208.
 ---
 
 # Skills File Format

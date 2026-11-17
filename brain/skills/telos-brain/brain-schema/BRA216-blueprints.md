@@ -2,9 +2,7 @@
 name: Blueprints
 code: BRA216
 version: 1
-description: How to author blueprint.yml and blueprint entry markdown — scope,
-  categories, and per-entry frontmatter. Load this when creating or editing a
-  blueprint or one of its entries.
+description: How to author blueprint.yml and blueprint entry markdown — scope, categories, and per-entry frontmatter. Load this when creating or editing a blueprint or one of its entries.
 ---
 
 # Blueprints

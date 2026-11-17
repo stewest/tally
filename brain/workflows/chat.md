@@ -1,61 +1,43 @@
 ---
 name: Chat
 code: WF-CHAT
-description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
-version: 7
-# This list is the whole run. A brain default does not override it (BRA210).
-# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
-model: anthropic/claude-sonnet-4-6
-
-# RUNNABLE: this workflow is executed manually / interactively as a chat.
 type: RUNNABLE
-
-# First cap must fit a large record_transactions payload. thinking-budget is
-# headroom on top of output-tokens so adaptive thinking cannot eat the reply.
-output-tokens: 8192, 16384
+version: 7
+description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
+model: anthropic/claude-sonnet-4-6
+system-prompt-code: WF-SYSTEM-PROMPT
+output-tokens: "8192,16384"
 caching: automatic
 max-turns: 50
 thinking: adaptive
 thinking-budget: 16384
 thinking-effort: low
-
-# Reuse the shared persona/tone/constraints as the system prompt.
-system-prompt-code: WF-SYSTEM-PROMPT
-
-# Injected tools available every turn.
 tools:
-  - web_search
-  - web_fetch
-  - find_available_skills
-  - get_skill
-  - find_available_tools
   - activate_tools
-  - search_blueprint_entries
-  - get_blueprint_entry
   - ask_question
-  - record_transactions
-  - list_transactions
-  - update_transaction
-  - list_budgets
-  - upsert_budget
+  - find_available_skills
+  - find_available_tools
+  - get_blueprint_entry
+  - get_skill
   - get_spend_summary
-
-# Management / maintenance tools kept in the searchable pool for on-demand use.
-# compact_context triggers context compaction (BRA263) via WF-COMPACT on any
-# provider; auto-compaction on Claude remains server-side when configured.
-available-tools:
-  - compact_context
-  - transcribe_image
-  - web_search
+  - list_budgets
+  - list_transactions
+  - record_transactions
+  - search_blueprint_entries
+  - update_transaction
+  - upsert_budget
   - web_fetch
-  - list_blueprint_entries
+  - web_search
+available-tools:
   - add_blueprint_entry
-  - update_blueprint_entry
+  - compact_context
+  - get_schema_file
+  - list_blueprint_entries
   - list_schema_files
   - search_schema_files
-  - get_schema_file
+  - transcribe_image
+  - update_blueprint_entry
   - update_schema_file
-
 available-skills:
   - BRA101
   - BRA201

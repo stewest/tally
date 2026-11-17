@@ -2,18 +2,7 @@
 name: "Execution API: Workflow Execution & Telemetry"
 code: BRA403
 version: 24
-description: How to list a brain's workflows (with pending inbox-task counts),
-  run them synchronously (SSE streaming) or asynchronously (fire-and-forget
-  with callback), pass optional run variables for {{input.*}} template tags
-  and pre-called input-tools (BRA409), hold a multi-turn chat session against
-  a single run, stop an in-flight turn without closing the session
-  (POST /runs/{id}/stop), and retrieve run telemetry and unit-of-work telemetry
-  via the Execution API — including model, thinking mode, temperature, sampling
-  parameters and turn totals on run
-  telemetry. Documents when a run settles Failed (max-turns exhausted, final
-  max_tokens with no retries). Also notes when a Completed, Failed, or
-  AwaitingInput run becomes eligible for learning evals (BRA207). Documents
-  SSRF rules for async callbackUrl (allowed-callback-domains).
+description: How to list a brain's workflows (with pending inbox-task counts), run them synchronously (SSE streaming) or asynchronously (fire-and-forget with callback), pass optional run variables for {{input.*}} template tags and pre-called input-tools (BRA409), hold a multi-turn chat session against a single run, stop an in-flight turn without closing the session (POST /runs/{id}/stop), and retrieve run telemetry and unit-of-work telemetry via the Execution API — including model, thinking mode, temperature, sampling parameters and turn totals on run telemetry. Documents when a run settles Failed (max-turns exhausted, final max_tokens with no retries). Also notes when a Completed, Failed, or AwaitingInput run becomes eligible for learning evals (BRA207). Documents SSRF rules for async callbackUrl (allowed-callback-domains).
 ---
 
 # Execution API: Workflow Execution & Telemetry

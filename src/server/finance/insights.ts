@@ -414,7 +414,7 @@ export async function startDailyInsightRuns(): Promise<{
     } catch (error) {
       failed += 1;
       console.error(
-        `Failed to start daily insights for organisation ${org.id}:`,
+        `Failed to start monthly insights for organisation ${org.id}:`,
         error
       );
     }

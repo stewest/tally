@@ -2,10 +2,7 @@
 name: "Management API: Authentication, Conventions & Signup"
 code: BRA301
 version: 1
-description: How to authenticate with the Telos Brain Management API, the
-  common conventions that apply across deploy-plane endpoints, and the public
-  organisation signup endpoint (POST /organisations/signup) used for
-  agent-initiated onboarding.
+description: How to authenticate with the Telos Brain Management API, the common conventions that apply across deploy-plane endpoints, and the public organisation signup endpoint (POST /organisations/signup) used for agent-initiated onboarding.
 ---
 
 # Management API: Authentication, Conventions & Signup

@@ -2,9 +2,7 @@
 name: Brain Compose Manifest
 code: BRA213
 version: 5
-description: How to author brain-compose.yml — name, models, entities, units of
-  work, variables, checkpoint strategy, and the outbound callback-domain
-  allowlist. Load this when creating or editing the compose file.
+description: How to author brain-compose.yml — name, models, entities, units of work, variables, checkpoint strategy, and the outbound callback-domain allowlist. Load this when creating or editing the compose file.
 ---
 
 # Brain Compose Manifest
@@ -259,4 +257,3 @@ Rules:
 Configure every harness hostname that will receive async completion callbacks or
 declared-tool webhooks before deploying tools / using async runs against those
 hosts.
-

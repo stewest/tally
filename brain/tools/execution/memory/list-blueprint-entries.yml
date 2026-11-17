@@ -1,11 +1,6 @@
 name: list_blueprint_entries
 version: 3
-description: >-
-  Lists memory entries for the current scope, optionally filtered by category
-  or by blueprint (code or title). When blueprint is omitted, every blueprint
-  at the scope is listed. Returns CSV Blueprint,Title,Category,Version,UpdatedAt.
-  Use get_blueprint_entry with blueprint, category, and title to read an entry
-  in full.
+description: Lists memory entries for the current scope, optionally filtered by category or by blueprint (code or title). When blueprint is omitted, every blueprint at the scope is listed. Returns CSV Blueprint,Title,Category,Version,UpdatedAt. Use get_blueprint_entry with blueprint, category, and title to read an entry in full.
 system:
   tool: list_blueprint_entries
 parameters:
@@ -16,10 +11,6 @@ parameters:
     required: false
   - name: blueprint
     param: blueprint
-    description: >-
-      Optional. Code or title of the blueprint to use. When omitted, every
-      blueprint at the current scope is included. When set, only that blueprint
-      is used. An unknown name is an error and does not fall back to another
-      blueprint.
+    description: Optional. Code or title of the blueprint to use. When omitted, every blueprint at the current scope is included. When set, only that blueprint is used. An unknown name is an error and does not fall back to another blueprint.
     type: string
     required: false

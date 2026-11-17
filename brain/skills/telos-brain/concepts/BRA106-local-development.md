@@ -2,11 +2,7 @@
 name: Local Development
 code: BRA106
 version: 14
-description: How to run Telos Brain locally with the CLI and Docker — start,
-  stop, deploy, credentials, pointing connectors at a host app via
-  host.docker.internal, and running workflows or embeddings against a local
-  LLM (Ollama or llama.cpp). Use when developing a brain or a host application
-  against a local Brain stack.
+description: How to run Telos Brain locally with the CLI and Docker — start, stop, deploy, credentials, pointing connectors at a host app via host.docker.internal, and running workflows or embeddings against a local LLM (Ollama or llama.cpp). Use when developing a brain or a host application against a local Brain stack.
 ---
 
 # Local Development

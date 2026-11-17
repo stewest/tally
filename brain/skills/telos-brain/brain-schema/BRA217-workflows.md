@@ -2,10 +2,7 @@
 name: Workflows
 code: BRA217
 version: 9
-description: How to author workflow markdown — frontmatter, types, triggers,
-  tools / available-tools, input-tools, LLM execution settings, session
-  timeout, and external agent deployment. Load this when creating or editing a
-  workflow.
+description: How to author workflow markdown — frontmatter, types, triggers, tools / available-tools, input-tools, LLM execution settings, session timeout, and external agent deployment. Load this when creating or editing a workflow.
 ---
 
 # Workflows

@@ -2,9 +2,7 @@
 name: Financial Memory Hygiene
 code: BUS404
 version: 1
-description: >-
-  What the brain may remember about money — nicknames and patterns only.
-  Account numbers and statement ledgers stay on host-app transaction rows.
+description: What the brain may remember about money — nicknames and patterns only. Account numbers and statement ledgers stay on host-app transaction rows.
 tools:
   - add_blueprint_entry
   - search_blueprint_entries

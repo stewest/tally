@@ -1,12 +1,10 @@
 name: Skills
-description: >-
-  Execution tools for discovering and loading skills, compacting context, and
-  transcribing images.
+description: Execution tools for discovering and loading skills, compacting context, and transcribing images.
 tools:
-  - find-available-skills.yml
-  - get-skill.yml
-  - list-skills.yml
-  - find-available-tools.yml
   - activate-tools.yml
   - compact-context.yml
+  - find-available-skills.yml
+  - find-available-tools.yml
+  - get-skill.yml
+  - list-skills.yml
   - transcribe-image.yml

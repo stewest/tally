@@ -2,10 +2,7 @@
 name: Brain Schema Tools
 code: BRA214
 version: 6
-description: How to author tool groups and tool YAML — api, mcp, system,
-  workflow, and native tools, plus parameters (headers vs query vs body vs path,
-  secrets, entity / unit-of-work / input bindings, URL path tokens, and outbound
-  types). Load this when creating or editing a tool.
+description: How to author tool groups and tool YAML — api, mcp, system, workflow, and native tools, plus parameters (headers vs query vs body vs path, secrets, entity / unit-of-work / input bindings, URL path tokens, and outbound types). Load this when creating or editing a tool.
 ---
 
 # Brain Schema Tools

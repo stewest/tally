@@ -1,10 +1,6 @@
 name: update_blueprint_entry
 version: 3
-description: >-
-  Updates an existing memory entry by replacing an exact substring of its
-  content with new text. old_str must appear exactly once in the current
-  content. Pass blueprint (code or title) when more than one blueprint exists
-  at the current scope.
+description: Updates an existing memory entry by replacing an exact substring of its content with new text. old_str must appear exactly once in the current content. Pass blueprint (code or title) when more than one blueprint exists at the current scope.
 system:
   tool: update_blueprint_entry
 parameters:
@@ -15,9 +11,7 @@ parameters:
     required: true
   - name: old_str
     param: old_str
-    description: >-
-      The exact substring of the current content to replace. Must appear
-      exactly once — include enough surrounding context to be unique.
+    description: The exact substring of the current content to replace. Must appear exactly once — include enough surrounding context to be unique.
     type: string
     required: true
   - name: new_str
@@ -27,10 +21,6 @@ parameters:
     required: true
   - name: blueprint
     param: blueprint
-    description: >-
-      Optional. Code or title of the blueprint to use. Required when more than
-      one blueprint exists at the current scope. A scope with a single
-      blueprint may omit it. An unknown name is an error and does not fall
-      back to another blueprint.
+    description: Optional. Code or title of the blueprint to use. Required when more than one blueprint exists at the current scope. A scope with a single blueprint may omit it. An unknown name is an error and does not fall back to another blueprint.
     type: string
     required: false

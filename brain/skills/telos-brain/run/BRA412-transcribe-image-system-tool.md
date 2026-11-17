@@ -2,10 +2,7 @@
 name: Transcribe Image System Tool
 code: BRA412
 version: 1
-description: The transcribe_image system tool — load an image from a URL and
-  extract text via the brain's vision transcription service (Claude or OpenAI).
-  Accepts an optional prompt to guide what to extract; omit it to transcribe
-  all visible text. Complements the file-upload Execution API in BRA410.
+description: The transcribe_image system tool — load an image from a URL and extract text via the brain's vision transcription service (Claude or OpenAI). Accepts an optional prompt to guide what to extract; omit it to transcribe all visible text. Complements the file-upload Execution API in BRA410.
 tools:
   - transcribe_image
 ---

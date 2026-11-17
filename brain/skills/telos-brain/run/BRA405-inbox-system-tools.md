@@ -2,15 +2,7 @@
 name: Inbox System Tools
 code: BRA405
 version: 16
-description: The in-brain system tools for operating the learning-signal inbox
-  — create_inbox_entry, create_inbox_cluster, list_inbox_entries,
-  get_inbox_entry, update_inbox_entry, list_inbox_tasks, add_inbox_task and
-  update_inbox_task. All identity is by 8-character reference (never UUID);
-  workflows are selected by code. Covers how PENDING tasks auto-run from the
-  linked workflow's inbox trigger (see BRA404). For clustering related entries,
-  see BRA413 (create_inbox_cluster). For persisting a run quality score, see
-  BRA406 (set_run_grading). For listing Organisation members and assigning
-  tasks by email, see BRA408 (list_users, assign_task_to_user).
+description: The in-brain system tools for operating the learning-signal inbox — create_inbox_entry, create_inbox_cluster, list_inbox_entries, get_inbox_entry, update_inbox_entry, list_inbox_tasks, add_inbox_task and update_inbox_task. All identity is by 8-character reference (never UUID); workflows are selected by code. Covers how PENDING tasks auto-run from the linked workflow's inbox trigger (see BRA404). For clustering related entries, see BRA413 (create_inbox_cluster). For persisting a run quality score, see BRA406 (set_run_grading). For listing Organisation members and assigning tasks by email, see BRA408 (list_users, assign_task_to_user).
 tools:
   - create_inbox_entry
   - create_inbox_cluster

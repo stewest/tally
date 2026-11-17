@@ -2,10 +2,7 @@
 name: Activate Tools System Tool
 code: BRA415
 version: 1
-description: The activate_tools system tool. After find_available_tools returns
-  names, pass the ones you intend to call. They are promoted for the rest of
-  the run, and onto the MCP server tool list for the rest of the session when
-  the run belongs to an MCP workflow or was started from one.
+description: The activate_tools system tool. After find_available_tools returns names, pass the ones you intend to call. They are promoted for the rest of the run, and onto the MCP server tool list for the rest of the session when the run belongs to an MCP workflow or was started from one.
 tools:
   - activate_tools
 ---

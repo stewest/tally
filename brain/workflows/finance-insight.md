@@ -4,8 +4,6 @@ code: WF-FINANCE-INSIGHT
 type: RUNNABLE
 version: 4
 description: Produces one short, actionable personal-finance insight card for a requested category from the organisation's transactions, then writes it back to the app.
-# This list is the whole run. A brain default does not override it (BRA210).
-# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"

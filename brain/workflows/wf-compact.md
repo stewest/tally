@@ -1,18 +1,13 @@
 ---
 name: Compact Context
 code: WF-COMPACT
-version: 3
-# This list is the whole run. A brain default does not override it (BRA210).
-# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
-model: anthropic/claude-haiku-4-5
 type: COMPACTION
+version: 3
 description: Summarises older conversation turns so a run can continue within the context window.
-
-# No tools — this workflow only reads the transcript passed as the user message
-# and returns a plain-text summary as its final reply.
-output-tokens: 2048
-max-turns: 1
+model: anthropic/claude-haiku-4-5
+output-tokens: "2048"
 caching: none
+max-turns: 1
 ---
 
 # Instructions

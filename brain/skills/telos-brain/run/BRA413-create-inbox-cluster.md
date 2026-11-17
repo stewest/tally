@@ -2,10 +2,7 @@
 name: Create Inbox Cluster System Tool
 code: BRA413
 version: 1
-description: The create_inbox_cluster system tool — consolidate related inbox
-  entries into a single PROCESSED cluster entry. Source entries become
-  COMPLETED and their open tasks are cancelled. Complements the inbox tools
-  in BRA405.
+description: The create_inbox_cluster system tool — consolidate related inbox entries into a single PROCESSED cluster entry. Source entries become COMPLETED and their open tasks are cancelled. Complements the inbox tools in BRA405.
 tools:
   - create_inbox_cluster
 ---

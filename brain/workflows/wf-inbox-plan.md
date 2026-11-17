@@ -1,31 +1,26 @@
 ---
 name: Inbox plan
 code: WF-INBOX-PLAN
-description: >-
-  Interactive planner for one inbox entry. Judges the entry with the Learning
-  Centre skill, proposes a plan, and creates or updates tasks only after the
-  operator accepts. Does not write schema.
-version: 1
-# This list is the whole run. A brain default does not override it (BRA210).
-# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
-model: anthropic/claude-sonnet-4-6
 type: RUNNABLE
+version: 1
+description: Interactive planner for one inbox entry. Judges the entry with the Learning Centre skill, proposes a plan, and creates or updates tasks only after the operator accepts. Does not write schema.
+model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
-session-timeout: 60
-output-tokens: 2048, 4096
+output-tokens: "2048,4096"
 caching: automatic
 max-turns: 20
+session-timeout: 60
 tools:
+  - add_inbox_task
+  - find_available_skills
   - get_inbox_entry
+  - get_skill
   - list_inbox_entries
   - list_inbox_tasks
-  - add_inbox_task
-  - update_inbox_task
-  - update_inbox_entry
-  - find_available_skills
-  - get_skill
   - list_schema_files
   - search_schema_files
+  - update_inbox_entry
+  - update_inbox_task
 injected-skills:
   - BRA414
 ---

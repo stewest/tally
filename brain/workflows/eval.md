@@ -1,20 +1,14 @@
 ---
 name: Learning Eval (Run)
 code: WF-EVAL-RUN
-version: 7
-# This list is the whole run. A brain default does not override it (BRA210).
-# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
-model: anthropic/claude-sonnet-4-6
 type: EVAL
-description: >-
-  Manual workflow-run learning eval (BRA207 / BRA406). Grades a Completed run
-  from {{run.telemetry}} against a 0–100 rubric (job done efficiently 40 /
-  tool use 35 / skill use 25), persists the score with set_run_grading, and
-  files each learning as a PENDING inbox entry (routing_type EVAL).
+version: 7
+description: Manual workflow-run learning eval (BRA207 / BRA406). Grades a Completed run from {{run.telemetry}} against a 0–100 rubric (job done efficiently 40 / tool use 35 / skill use 25), persists the score with set_run_grading, and files each learning as a PENDING inbox entry (routing_type EVAL).
+model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
 trigger: workflowrun:complete
 trigger-mode: manual
-output-tokens: 4096, 8192, 16384
+output-tokens: "4096,8192,16384"
 caching: automatic
 max-turns: 20
 max-runs-per-hour: 500

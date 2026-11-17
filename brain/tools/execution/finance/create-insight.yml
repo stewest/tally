@@ -1,9 +1,6 @@
 name: create_insight
 version: 1
-description: >-
-  Creates a ready host-app insight card from transaction analysis. Use on the
-  daily heartbeat when a skill has a concrete finding. Does not update a queued
-  row — call upsert_insight for that.
+description: Creates a ready host-app insight card from transaction analysis. Use on the daily heartbeat when a skill has a concrete finding. Does not update a queued row — call upsert_insight for that.
 api:
   method: POST
   path: /api/tools/createInsight
@@ -25,9 +22,7 @@ parameters:
     entity: organisationId
   - name: category
     param: category
-    description: >-
-      Insight category code. One of spending_trends, budget_alerts, anomalies,
-      budgeting_spending, saving_emergency, debt_credit, investing_growth.
+    description: Insight category code. One of spending_trends, budget_alerts, anomalies, budgeting_spending, saving_emergency, debt_credit, investing_growth.
     type: string
     required: true
   - name: title
@@ -37,9 +32,7 @@ parameters:
     required: true
   - name: tips
     param: tips
-    description: >-
-      JSON array of 3 to 5 short actionable tip sentences as a string, e.g.
-      ["Dining is 28% of spend this month.","Countdown repeats weekly at about $90."].
+    description: JSON array of 3 to 5 short actionable tip sentences as a string, e.g. ["Dining is 28% of spend this month.","Countdown repeats weekly at about $90."].
     type: string
     required: true
 response-markdown: |

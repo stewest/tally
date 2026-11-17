@@ -2,12 +2,7 @@
 name: LLM Providers and Models
 code: BRA210
 version: 25
-description: Supported AI providers for workflow runs, the provider/model string
-  format, example model codes, credential variable names, the Telos Brain
-  platform Grok aggregator (telosbrain/xai/grok-4.6), OpenRouter, Azure
-  OpenAI, local OpenAI-compatible runners (Ollama / llama.cpp / NIM, optional
-  Cloudflare Access pair), and which LLM
-  execution settings apply per provider.
+description: Supported AI providers for workflow runs, the provider/model string format, example model codes, credential variable names, the Telos Brain platform Grok aggregator (telosbrain/xai/grok-4.6), OpenRouter, Azure OpenAI, local OpenAI-compatible runners (Ollama / llama.cpp / NIM, optional Cloudflare Access pair), and which LLM execution settings apply per provider.
 ---
 
 # LLM Providers and Models

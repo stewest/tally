@@ -2,13 +2,7 @@
 name: Managing LLM Costs
 code: BRA212
 version: 7
-description: How to keep LLM spend down in a Telos Brain — aim for 80% cache
-  reads (or turn on automatic caching), convert JSON tool data to markdown or
-  CSV, treat tool definitions as mini-skills to cut retries, compact older
-  context, pick a cheaper model (Grok), enforce token budgets plus daily spend
-  and run/turn caps, and use progressive disclosure so the agent discovers
-  skills and tools as needed. Use when authoring or reviewing workflows, tools,
-  or brain-compose.yml for cost, tokens, cache, compaction, or model choice.
+description: How to keep LLM spend down in a Telos Brain — aim for 80% cache reads (or turn on automatic caching), convert JSON tool data to markdown or CSV, treat tool definitions as mini-skills to cut retries, compact older context, pick a cheaper model (Grok), enforce token budgets plus daily spend and run/turn caps, and use progressive disclosure so the agent discovers skills and tools as needed. Use when authoring or reviewing workflows, tools, or brain-compose.yml for cost, tokens, cache, compaction, or model choice.
 tools:
   - list_schema_files
   - get_schema_file

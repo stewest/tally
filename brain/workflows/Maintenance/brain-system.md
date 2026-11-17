@@ -1,13 +1,9 @@
 ---
 name: Brain System Prompt
 code: WF-BRAIN-SYSTEM
-description: >-
-  Maintenance system prompt — how the brain, skillbooks, skills, workflows,
-  tools and management tools work. Used only by brain-maintenance workflows.
-version: 5
-
-# Never executed directly — referenced via system-prompt-code.
 type: SYSTEM
+version: 5
+description: Maintenance system prompt — how the brain, skillbooks, skills, workflows, tools and management tools work. Used only by brain-maintenance workflows.
 ---
 
 # Persona

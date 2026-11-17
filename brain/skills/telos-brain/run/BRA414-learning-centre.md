@@ -2,10 +2,7 @@
 name: Learning Centre
 code: BRA414
 version: 1
-description: How the learning centre turns inbox entries from evals, email,
-  meetings, and uploads into trusted learning signals. Weight, clustering, and
-  when a signal becomes specific tasks. Inject when triaging or planning an
-  inbox entry.
+description: How the learning centre turns inbox entries from evals, email, meetings, and uploads into trusted learning signals. Weight, clustering, and when a signal becomes specific tasks. Inject when triaging or planning an inbox entry.
 ---
 
 # Learning Centre
