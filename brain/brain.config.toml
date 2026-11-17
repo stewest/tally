@@ -2,7 +2,7 @@
 # Created by `brain start` — analogous to supabase/config.toml.
 
 [local]
-project_id = "brain-vercel-supabase-template"
+project_id = "tally"
 instance = "local-brain"
 api_port = 60061
 sql_port = 1433
