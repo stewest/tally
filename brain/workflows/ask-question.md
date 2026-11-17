@@ -4,7 +4,7 @@ code: WF-ASK-QUESTION
 type: TOOL
 version: 2
 description: Answers a single question by searching the brain's memory blueprint and returning only information that answers the question.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "2048,4096"
 caching: automatic

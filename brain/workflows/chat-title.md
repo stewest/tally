@@ -4,7 +4,7 @@ code: WF-CHAT-TITLE
 type: RUNNABLE
 version: 1
 description: Writes a short session title from the user's first chat message.
-model: anthropic/claude-haiku-4-5
+model: anthropic/claude-haiku-5-5
 output-tokens: "64"
 caching: none
 max-turns: 1

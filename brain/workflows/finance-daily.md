@@ -4,8 +4,7 @@ code: WF-FINANCE-DAILY
 type: RUNNABLE
 version: 8
 description: Monthly heartbeat that reviews organisation transactions and writes one Insights card per personal-finance skill that has a concrete finding.
-frequency: monthly
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
 max-turns: 30

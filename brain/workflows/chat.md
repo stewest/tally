@@ -4,7 +4,7 @@ code: WF-CHAT
 type: RUNNABLE
 version: 7
 description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "8192,16384"
 caching: automatic

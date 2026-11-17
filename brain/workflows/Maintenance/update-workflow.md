@@ -4,7 +4,7 @@ code: WF-UPDATE-WORKFLOW
 type: TRIGGERED
 version: 11
 description: Autonomously applies learnings to workflow instructions and tool definitions (create or update). Triggered for WORKFLOW_UPDATE and TOOL_UPDATE at high learning mode when inbox weight is 5 or higher.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-BRAIN-SYSTEM
 trigger:
   - inbox:WORKFLOW_UPDATE:high:5

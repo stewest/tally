@@ -4,7 +4,7 @@ code: WF-FINANCE-REVIEW
 type: RUNNABLE
 version: 3
 description: Reviews organisation spend against budgets for a given period, flags uncategorised transactions, and records reusable insights.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
 max-turns: 30

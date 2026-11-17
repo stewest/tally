@@ -4,7 +4,7 @@ code: WF-EVAL
 type: TRIGGERED
 version: 3
 description: On unit-of-work completion, detects domain concepts that fit blueprint categories and creates a PROCESSED inbox entry with one review_blueprint task per learning. Does not grade agent quality (see WF-EVAL-RUN).
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 trigger: unitofwork:complete:low
 output-tokens: "4096,8192"

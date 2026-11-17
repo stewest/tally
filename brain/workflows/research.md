@@ -4,7 +4,7 @@ code: WF-RESEARCH
 type: TRIGGERED
 version: 4
 description: Researches a topic from an inbox entry using web search, web fetch, skills, and memory. Compiles findings into a new PROCESSED inbox entry (no RESEARCH routing — prevents recursion).
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 trigger: inbox:RESEARCH
 trigger-mode: manual

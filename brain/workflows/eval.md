@@ -4,7 +4,7 @@ code: WF-EVAL-RUN
 type: EVAL
 version: 7
 description: Manual workflow-run learning eval (BRA207 / BRA406). Grades a Completed run from {{run.telemetry}} against a 0–100 rubric (job done efficiently 40 / tool use 35 / skill use 25), persists the score with set_run_grading, and files each learning as a PENDING inbox entry (routing_type EVAL).
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 trigger: workflowrun:complete
 trigger-mode: manual

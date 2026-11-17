@@ -4,7 +4,7 @@ code: WF-REVIEW-BLUEPRINT
 type: TRIGGERED
 version: 8
 description: Applies one blueprint memory write from a review_blueprint inbox task — searches for a close match, then either merges into an existing entry or creates a new one. Never both.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 trigger: inbox:MEMORY_UPDATE:low
 output-tokens: "4096,8192"

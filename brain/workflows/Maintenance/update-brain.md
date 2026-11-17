@@ -4,7 +4,7 @@ code: WF-UPDATE-BRAIN
 type: TRIGGERED
 version: 11
 description: "Autonomously self-heals and self-manages the brain: subagents (TOOL workflows exposed as workflow tools), wiring, and other structural schema fixes outside skill-craft and simple workflow/tool edits. High learning mode and inbox weight 5 or higher."
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-BRAIN-SYSTEM
 trigger: inbox:SYSTEM_CHANGE:high:5
 auto-compaction: 100000

@@ -4,7 +4,7 @@ code: WF-INBOX-PLAN
 type: RUNNABLE
 version: 1
 description: Interactive planner for one inbox entry. Judges the entry with the Learning Centre skill, proposes a plan, and creates or updates tasks only after the operator accepts. Does not write schema.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "2048,4096"
 caching: automatic

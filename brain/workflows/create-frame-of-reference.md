@@ -4,7 +4,7 @@ code: WF-FRAME-OF-REFERENCE
 type: TOOL
 version: 2
 description: Builds a grounded frame of reference for a given context using the brain glossary and blueprint memory — problem statement, frame, domain model, bigger picture, and considerations.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "2048,4096"
 caching: automatic

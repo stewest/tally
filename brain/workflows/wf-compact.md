@@ -4,7 +4,7 @@ code: WF-COMPACT
 type: COMPACTION
 version: 3
 description: Summarises older conversation turns so a run can continue within the context window.
-model: anthropic/claude-haiku-4-5
+model: anthropic/claude-haiku-5-5
 output-tokens: "2048"
 caching: none
 max-turns: 1

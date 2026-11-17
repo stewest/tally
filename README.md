@@ -8,7 +8,7 @@ Demo app (Next.js, Clerk, Supabase) with a Telos Brain schema in `brain/` with t
 - Docker Desktop (or Engine + Compose on Linux, or equivalent like OrbStack).
 - [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) (`brew install supabase/tap/supabase`)
 - A [Clerk](https://clerk.com) account (optional locally; required for stage/prod)
-- An [Anthropic](https://console.anthropic.com) API key (workflows pin `anthropic/claude-sonnet-4-6`; compaction uses Haiku)
+- An [Anthropic](https://console.anthropic.com) API key (workflows pin `anthropic/claude-haiku-5-5`)
 - A [Voyage](https://dash.voyageai.com) API key (optional at deploy; embeddings skipped if unset; this brain defaults to `voyage-3-lite`)
   - Add Anthropic (and Voyage if you want semantic search) before running the 'brain deploy' step.
 - Optional: [OpenRouter](https://openrouter.ai) (`openrouter/…` or `openrouter/auto`), [Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/) (`azure/<deployment>`), [OpenAI](https://platform.openai.com), [xAI](https://console.x.ai), or a local Ollama / llama.cpp runner (BRA106 §8 / BRA210)

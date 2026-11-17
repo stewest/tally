@@ -4,7 +4,7 @@ code: WF-FINANCE-INSIGHT
 type: RUNNABLE
 version: 4
 description: Produces one short, actionable personal-finance insight card for a requested category from the organisation's transactions, then writes it back to the app.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
 max-turns: 20

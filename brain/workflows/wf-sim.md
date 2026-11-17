@@ -4,7 +4,7 @@ code: WF-SIM
 type: SIMULATION
 version: 2
 description: Synthesises a plausible tool response from historical sample call/response pairs for simulation runs.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 output-tokens: "4096"
 caching: automatic
 max-turns: 3

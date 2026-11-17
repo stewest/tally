@@ -4,7 +4,7 @@ code: WF-UPDATE-SKILL
 type: TRIGGERED
 version: 13
 description: Autonomously extracts transferable skill knowledge from an inbox entry and creates or updates skills (and rarely categories) via schema tools. Source material comes from {{inboxEntry.body}}; skill book structure is injected.
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-5-5
 system-prompt-code: WF-BRAIN-SYSTEM
 trigger: inbox:SKILL_UPDATE:high:5
 auto-compaction: 100000
