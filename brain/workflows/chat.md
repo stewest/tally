@@ -1,41 +1,61 @@
 ---
 name: Chat
 code: WF-CHAT
-type: RUNNABLE
-version: 6
 description: General-purpose conversational assistant with web access, skill lookup, memory search, focused Q&A and personal-finance tools.
+version: 7
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
-system-prompt-code: WF-SYSTEM-PROMPT
-output-tokens: "8192,16384"
+
+# RUNNABLE: this workflow is executed manually / interactively as a chat.
+type: RUNNABLE
+
+# First cap must fit a large record_transactions payload. thinking-budget is
+# headroom on top of output-tokens so adaptive thinking cannot eat the reply.
+output-tokens: 8192, 16384
 caching: automatic
 max-turns: 50
 thinking: adaptive
 thinking-budget: 16384
 thinking-effort: low
+
+# Reuse the shared persona/tone/constraints as the system prompt.
+system-prompt-code: WF-SYSTEM-PROMPT
+
+# Injected tools available every turn.
 tools:
-  - ask_question
-  - find_available_skills
-  - get_blueprint_entry
-  - get_skill
-  - get_spend_summary
-  - list_budgets
-  - list_transactions
-  - record_transactions
-  - search_blueprint_entries
-  - update_transaction
-  - upsert_budget
-  - web_fetch
   - web_search
-available-tools:
-  - add_blueprint_entry
-  - compact_context
+  - web_fetch
+  - find_available_skills
+  - get_skill
   - find_available_tools
-  - get_schema_file
+  - activate_tools
+  - search_blueprint_entries
+  - get_blueprint_entry
+  - ask_question
+  - record_transactions
+  - list_transactions
+  - update_transaction
+  - list_budgets
+  - upsert_budget
+  - get_spend_summary
+
+# Management / maintenance tools kept in the searchable pool for on-demand use.
+# compact_context triggers context compaction (BRA263) via WF-COMPACT on any
+# provider; auto-compaction on Claude remains server-side when configured.
+available-tools:
+  - compact_context
+  - transcribe_image
+  - web_search
+  - web_fetch
   - list_blueprint_entries
+  - add_blueprint_entry
+  - update_blueprint_entry
   - list_schema_files
   - search_schema_files
-  - update_blueprint_entry
+  - get_schema_file
   - update_schema_file
+
 available-skills:
   - BRA101
   - BRA201
@@ -56,14 +76,18 @@ answers.
    focused sub-question, prefer `ask_question`.
 3. When a request touches procedures or platform knowledge, use
    `find_available_skills` then `get_skill` to load the skill you need.
-4. When you need current or external information, use `web_search` to find
+4. When a needed tool is not already injected, call `find_available_tools`,
+   then `activate_tools` with those names, before calling them. A search
+   result does not make a tool callable.
+5. When you need current or external information, use `web_search` to find
    sources and `web_fetch` to read a specific page.
-5. When the user pastes bank statement text or a `bank-statement` fenced
+6. When the user pastes bank statement text or a `bank-statement` fenced
    block, load skill `BUS301` then follow this multi-account import protocol:
    a. **Plan upfront.** Before importing any rows, identify every distinct
-      account present in the paste and state the full list (e.g. "Accounts to
-      import: Current Account, General Savings, Car Savings"). Do not start any
-      `record_transactions` call until the plan is declared.
+      account present in the paste and state the full list using nicknames
+      from Account Type Rules (e.g. "Accounts to import: Current, Savings").
+      Do not start any `record_transactions` call until the plan is declared.
+      Do not quote bank account numbers (skill `BUS404`).
    b. **Import in parallel where possible.** When batches are independent —
       different accounts, or non-overlapping date ranges within one account —
       issue them as simultaneous `record_transactions` calls in the same turn
@@ -74,8 +98,8 @@ answers.
    d. Do not reason through every row in thinking — parse silently, call the
       tool, then confirm per-account inserted/skipped counts. Do not invent
       transactions.
-6. When the user asks about spend, budgets, or categorisation, use
+7. When the user asks about spend, budgets, or categorisation, use
    `list_transactions`, `get_spend_summary`, `list_budgets` and
    `upsert_budget` rather than guessing.
-7. Cite what you relied on (blueprint titles, skill codes or URLs) and be clear
+8. Cite what you relied on (blueprint titles, skill codes or URLs) and be clear
    about anything you are unsure of. Prefer a concise, direct answer.

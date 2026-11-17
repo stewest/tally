@@ -1,9 +1,13 @@
 ---
 name: Finance Review
 code: WF-FINANCE-REVIEW
+description: >-
+  Reviews organisation spend against budgets for a given period, flags
+  uncategorised transactions, and records reusable insights.
+version: 3
 type: RUNNABLE
-version: 2
-description: Reviews organisation spend against budgets for a given period, flags uncategorised transactions, and records reusable insights.
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
@@ -19,8 +23,8 @@ tools:
   - search_blueprint_entries
   - update_transaction
   - upsert_budget
-available-tools:
   - add_blueprint_entry
+available-tools:
   - list_blueprint_entries
   - record_transactions
 available-skills:
@@ -40,8 +44,9 @@ a required category is genuinely missing.
 
 ## Process
 
-1. Load budgeting and category rules from memory
-   (`search_blueprint_entries` then `get_blueprint_entry`).
+1. Load budgeting and category rules from the Personal Finance blueprint.
+   Pass `blueprint` `Personal Finance` on `search_blueprint_entries` and on
+   `get_blueprint_entry` (with that entry's category and title).
 2. Call `get_spend_summary` for the requested dates (default: current calendar
    month).
 3. Call `list_transactions` for the same range and identify uncategorised
@@ -57,8 +62,9 @@ a required category is genuinely missing.
    - Uncategorised or uncertain items
    - Insights worth remembering
 7. If you find a reusable pattern, load `BUS404` then call
-   `add_blueprint_entry` under **Insights**. Patterns and nicknames only —
-   never account numbers or a transaction table.
+   `add_blueprint_entry` with `blueprint` `Personal Finance` and category
+   **Insights**. Patterns and nicknames only — never account numbers or a
+   transaction table. Memory also has an Insights category. Do not write there.
 
 ## Rules
 

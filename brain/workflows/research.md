@@ -1,26 +1,38 @@
 ---
 name: Research
 code: WF-RESEARCH
-type: TRIGGERED
-version: 3
-description: Researches a topic from an inbox entry using web search, web fetch, skills, and memory. Compiles findings into a new PROCESSED inbox entry (no RESEARCH routing — prevents recursion).
+description: >-
+  Researches a topic from an inbox entry using web search, web fetch, skills,
+  and memory. Compiles findings into a new PROCESSED inbox entry (no RESEARCH
+  routing — prevents recursion).
+version: 4
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
-system-prompt-code: WF-SYSTEM-PROMPT
+
+# Tasks are created by WF-TRIAGE (or Admin routing) with workflow_code
+# WF-RESEARCH. trigger-mode manual keeps stage-1 tasks in AWAITING_APPROVAL
+# until a human approves — web search is external I/O with unknown cost.
+type: TRIGGERED
 trigger: inbox:RESEARCH
 trigger-mode: manual
-output-tokens: "4096,8192"
+
+system-prompt-code: WF-SYSTEM-PROMPT
+
+output-tokens: 4096, 8192
 caching: automatic
 max-turns: 30
 thinking: effort
 max-runs-per-hour: 100
+
 tools:
-  - create_inbox_entry
+  - web_search
+  - web_fetch
   - find_available_skills
-  - get_blueprint_entry
   - get_skill
   - search_blueprint_entries
-  - web_fetch
-  - web_search
+  - get_blueprint_entry
+  - create_inbox_entry
 ---
 
 # Instructions

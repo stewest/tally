@@ -1,18 +1,31 @@
 ---
 name: Create Frame of Reference
 code: WF-FRAME-OF-REFERENCE
-type: TOOL
-version: 1
-description: Builds a grounded frame of reference for a given context using the brain glossary and blueprint memory — problem statement, frame, domain model, bigger picture, and considerations.
+description: >-
+  Builds a grounded frame of reference for a given context using the brain
+  glossary and blueprint memory — problem statement, frame, domain model,
+  bigger picture, and considerations.
+version: 2
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
+
+# TOOL: callable as a pre-step by other workflows (e.g. via run_workflow or the
+# create_frame_of_reference workflow-tool). Parameters arrive as {{input.*}}.
+type: TOOL
+
 system-prompt-code: WF-SYSTEM-PROMPT
-output-tokens: "2048,4096"
+
+output-tokens: 2048, 4096
 caching: automatic
 max-turns: 12
+
+# Glossary is built from {{#blueprint.entries}} (title + version/centrality).
+# Retrieval uses blueprint search — ask_question is a separate workflow-tool.
 tools:
+  - search_blueprint_entries
   - get_blueprint_entry
   - list_blueprint_entries
-  - search_blueprint_entries
 ---
 
 # Instructions

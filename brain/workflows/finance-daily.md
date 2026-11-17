@@ -2,14 +2,16 @@
 name: Daily Finance Insights
 code: WF-FINANCE-DAILY
 type: RUNNABLE
-version: 6
+version: 7
 description: Daily heartbeat that reviews organisation transactions and writes one Insights card per personal-finance skill that has a concrete finding.
+frequency: daily
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
 max-turns: 30
 thinking: adaptive
-frequency: daily
 tools:
   - create_insight
   - find_available_skills
@@ -54,8 +56,9 @@ this workflow once per organisation entity (Vercel cron or a local POST to
    - `title` — the friendly category name
    - `tips` — a JSON array string of 3 to 5 tip sentences
 4. If a skill's data is thin, skip that card. Do not invent advice.
-5. If `create_insight` says a card for that category was already recorded
-   this week, leave it and continue.
+5. If `create_insight` says the category was already recorded this month,
+   leave it and continue. The tool keeps one card per category each month,
+   adds a tip only when it is new, and skips the card when nothing new is left.
 
 ## Rules
 

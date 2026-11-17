@@ -10,7 +10,9 @@ import { Icon } from "@/components/ui/Icon";
 import { usePageLayout } from "@/hooks/usePageLayout";
 import { useDeleteBudget, useUpdateBudget, useUpsertBudget } from "@/hooks/useBudgets";
 import { useFinanceSummary } from "@/hooks/useFinanceSummary";
+import { BUDGET_PERIOD_LABELS, groupBudgetsByCategory } from "@/lib/finance";
 import { formatCurrency } from "@/lib/utils";
+import RowActionMenu from "@/components/ui/RowActionMenu";
 import type { BudgetFormValues } from "@/app/types/form-validation";
 import type { BudgetPeriod } from "@db/schema";
 
@@ -26,6 +28,7 @@ export default function BudgetsPage() {
   const deleteBudget = useDeleteBudget();
 
   const budgets = summary.data?.budgets ?? [];
+  const budgetGroups = useMemo(() => groupBudgetsByCategory(budgets), [budgets]);
 
   const handleCreate = async (data: BudgetFormValues) => {
     try {
@@ -85,77 +88,78 @@ export default function BudgetsPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {budgets.map(budget => {
-          const over = budget.percentUsed >= 100;
-          const warning = budget.percentUsed >= 80 && !over;
-          return (
-            <BaseCard key={budget.id} className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {budget.category}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    <span className="capitalize">{budget.period}</span>
-                    {" · "}
-                    {budget.startsOn}
-                    {budget.endsOn ? ` to ${budget.endsOn}` : ""}
+        {budgetGroups.map(group => (
+          <BaseCard key={group.category} className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">{group.category}</h2>
+            {group.budgets.map(budget => {
+              const over = budget.percentUsed >= 100;
+              const warning = budget.percentUsed >= 80 && !over;
+              const periodLabel = BUDGET_PERIOD_LABELS[budget.period];
+              return (
+                <div key={budget.id} className="space-y-2 border-t border-gray-100 pt-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">{periodLabel}</h3>
+                      <p className="text-xs text-gray-400">
+                        {budget.periodStart} to {budget.periodEnd}
+                        {budget.endsOn ? ` · ends ${budget.endsOn}` : ""}
+                      </p>
+                    </div>
+                    <RowActionMenu
+                      items={[
+                        {
+                          icon: "pencil",
+                          label: "Edit",
+                          onClick: () => setEditing(budget),
+                        },
+                        {
+                          icon: "trash",
+                          label: "Delete",
+                          destructive: true,
+                          disabled: deleteBudget.isPending,
+                          onClick: () => {
+                            void deleteBudget.mutateAsync(budget.id);
+                          },
+                        },
+                      ]}
+                    />
+                  </div>
+                  {budget.notes && (
+                    <p className="text-sm text-gray-500">{budget.notes}</p>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      {formatCurrency(budget.spent, budget.currency)} spent
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {formatCurrency(budget.amount, budget.currency)}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className={`h-full rounded-full ${
+                        over ? "bg-red-500" : warning ? "bg-amber-500" : "bg-blue-600"
+                      }`}
+                      style={{ width: `${Math.min(budget.percentUsed, 100)}%` }}
+                    />
+                  </div>
+                  <p
+                    className={`text-sm ${
+                      over
+                        ? "text-red-600"
+                        : warning
+                          ? "text-amber-600"
+                          : "text-gray-500"
+                    }`}
+                  >
+                    {budget.percentUsed}% used ·{" "}
+                    {formatCurrency(budget.remaining, budget.currency)} remaining
                   </p>
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                    onClick={() => setEditing(budget)}
-                    title="Edit"
-                  >
-                    <Icon icon="pencil" className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                    onClick={() => {
-                      void deleteBudget.mutateAsync(budget.id);
-                    }}
-                    title="Delete"
-                  >
-                    <Icon icon="trash" className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">
-                  {formatCurrency(budget.spent, budget.currency)} spent
-                </span>
-                <span className="font-medium text-gray-900">
-                  {formatCurrency(budget.amount, budget.currency)}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400">
-                This period: {budget.periodStart} to {budget.periodEnd}
-              </p>
-              <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className={`h-full rounded-full ${
-                    over ? "bg-red-500" : warning ? "bg-amber-500" : "bg-blue-600"
-                  }`}
-                  style={{ width: `${Math.min(budget.percentUsed, 100)}%` }}
-                />
-              </div>
-              <p
-                className={`text-sm ${
-                  over
-                    ? "text-red-600"
-                    : warning
-                      ? "text-amber-600"
-                      : "text-gray-500"
-                }`}
-              >
-                {budget.percentUsed}% used · {formatCurrency(budget.remaining, budget.currency)} remaining
-              </p>
-            </BaseCard>
-          );
-        })}
+              );
+            })}
+          </BaseCard>
+        ))}
       </div>
 
       {isCreateOpen && (

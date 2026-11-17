@@ -1,18 +1,29 @@
 ---
 name: Ask Question
 code: WF-ASK-QUESTION
-type: TOOL
-version: 1
-description: Answers a single question by searching the brain's memory blueprint and returning only information that answers the question.
+description: >-
+  Answers a single question by searching the brain's memory blueprint and
+  returning only information that answers the question.
+version: 2
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
+
+# TOOL: not run manually — exposed via tools/execution/qa/ask-question.yml and
+# invoked as its own workflow-run. Parameters arrive as {{input.query}}.
+type: TOOL
+
 system-prompt-code: WF-SYSTEM-PROMPT
-output-tokens: "2048,4096"
+
+output-tokens: 2048, 4096
 caching: automatic
 max-turns: 8
+
+# Blueprint tools only — this workflow must ground answers in memory.
 tools:
+  - search_blueprint_entries
   - get_blueprint_entry
   - list_blueprint_entries
-  - search_blueprint_entries
 ---
 
 # Instructions

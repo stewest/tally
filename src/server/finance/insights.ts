@@ -6,8 +6,15 @@ import {
   type Insight,
   type InsightCategory,
 } from "@db/schema";
-import { and, count, desc, eq, gte, isNotNull } from "drizzle-orm";
-import { INSIGHT_CATEGORY_LABELS } from "@/lib/insights";
+import { and, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import {
+  DISMISSED_INSIGHT_TITLE,
+  INSIGHT_CATEGORY_LABELS,
+  insightMonthKey,
+  insightTitleRepeatsCategory,
+  isDismissedInsight,
+  tipsNotAlreadyStated,
+} from "@/lib/insights";
 import {
   createBrainUnitOfWork,
   isBrainConfigured,
@@ -18,15 +25,17 @@ import { ensureBrainEntityForOrganisation } from "@/server/brain/entities";
 const INSIGHT_WORKFLOW_CODE = "WF-FINANCE-INSIGHT";
 const DAILY_INSIGHT_WORKFLOW_CODE = "WF-FINANCE-DAILY";
 const INSIGHT_UNIT_OF_WORK_TYPE = "insight";
+const NOTHING_NEW_TIP = "No change from the insights already recorded.";
 
 export async function listInsights(organisationId: string): Promise<Insight[]> {
-  return withOrgContext(organisationId, tx =>
+  const rows = await withOrgContext(organisationId, tx =>
     tx
       .select()
       .from(insights)
       .where(eq(insights.organisationId, organisationId))
       .orderBy(desc(insights.createdAt))
   );
+  return rows.filter(row => !isDismissedInsight(row));
 }
 
 export async function organisationHasTransactions(
@@ -60,9 +69,61 @@ export async function queueInsights(
   }
 
   const created: Insight[] = [];
+  const monthKey = insightMonthKey(new Date());
 
   for (const category of categories) {
     const row = await withOrgContext(organisationId, async tx => {
+      const history = await tx
+        .select()
+        .from(insights)
+        .where(eq(insights.organisationId, organisationId));
+      const monthRows = history
+        .filter(
+          item =>
+            item.category === category && insightMonthKey(item.createdAt) === monthKey
+        )
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+      const existing = monthRows[0];
+
+      if (existing) {
+        const otherIds = monthRows.slice(1).map(item => item.id);
+        if (otherIds.length > 0) {
+          await tx
+            .update(insights)
+            .set({
+              status: "ready",
+              title: DISMISSED_INSIGHT_TITLE,
+              tips: [],
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(insights.organisationId, organisationId),
+                inArray(insights.id, otherIds)
+              )
+            );
+        }
+
+        const [updated] = await tx
+          .update(insights)
+          .set({
+            status: "analysing",
+            title: "",
+            tips: [],
+            brainUnitOfWorkId: null,
+            brainRunId: null,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(insights.id, existing.id),
+              eq(insights.organisationId, organisationId)
+            )
+          )
+          .returning();
+        return updated;
+      }
+
       const [inserted] = await tx
         .insert(insights)
         .values({
@@ -164,12 +225,6 @@ export async function queueInsights(
   return created;
 }
 
-function startOfUtcDay(now = new Date()): Date {
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  );
-}
-
 function isUniqueViolation(error: unknown): boolean {
   let current: unknown = error;
   for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
@@ -184,7 +239,7 @@ function isUniqueViolation(error: unknown): boolean {
 export async function createReadyInsight(
   organisationId: string,
   input: { category: InsightCategory; title: string; tips: string[] }
-): Promise<{ insight: Insight; alreadyRecorded: boolean }> {
+): Promise<{ insight: Insight | null; alreadyRecorded: boolean; appended: boolean }> {
   const hasTransactions = await organisationHasTransactions(organisationId);
   if (!hasTransactions) {
     throw new Error("Add transactions before creating an insight.");
@@ -200,22 +255,56 @@ export async function createReadyInsight(
     throw new Error("tips must include at least one sentence.");
   }
 
+  const monthKey = insightMonthKey(new Date());
+
   return withOrgContext(organisationId, async tx => {
-    const [existing] = await tx
+    const history = await tx
       .select()
       .from(insights)
-      .where(
-        and(
-          eq(insights.organisationId, organisationId),
-          eq(insights.category, input.category),
-          eq(insights.status, "ready"),
-          gte(insights.createdAt, startOfUtcDay())
-        )
-      )
-      .limit(1);
+      .where(eq(insights.organisationId, organisationId));
+    const blocking = blockingInsight(history, input.category, monthKey);
+    const priorTips = statedTips(history);
 
-    if (existing) {
-      return { insight: existing, alreadyRecorded: true };
+    if (blocking && !isDismissedInsight(blocking) && blocking.status === "ready") {
+      const freshTips = tipsNotAlreadyStated(tips, priorTips);
+      if (freshTips.length === 0) {
+        return { insight: blocking, alreadyRecorded: true, appended: false };
+      }
+
+      const nextTitle =
+        insightTitleRepeatsCategory(blocking.title, input.category) &&
+        !insightTitleRepeatsCategory(title, input.category)
+          ? title
+          : blocking.title;
+      const [updated] = await tx
+        .update(insights)
+        .set({
+          title: nextTitle,
+          tips: [...blocking.tips, ...freshTips],
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(insights.id, blocking.id),
+            eq(insights.organisationId, organisationId)
+          )
+        )
+        .returning();
+
+      return {
+        insight: updated ?? blocking,
+        alreadyRecorded: true,
+        appended: true,
+      };
+    }
+
+    if (blocking) {
+      return { insight: blocking, alreadyRecorded: true, appended: false };
+    }
+
+    const freshTips = tipsNotAlreadyStated(tips, priorTips);
+    if (freshTips.length === 0) {
+      return { insight: null, alreadyRecorded: true, appended: false };
     }
 
     try {
@@ -226,7 +315,7 @@ export async function createReadyInsight(
           category: input.category,
           status: "ready",
           title,
-          tips,
+          tips: freshTips,
         })
         .returning();
 
@@ -234,32 +323,50 @@ export async function createReadyInsight(
         throw new Error("Insight was not saved.");
       }
 
-      return { insight: inserted, alreadyRecorded: false };
+      return { insight: inserted, alreadyRecorded: false, appended: false };
     } catch (error) {
       if (!isUniqueViolation(error)) {
         throw error;
       }
 
-      const [duplicate] = await tx
+      const again = await tx
         .select()
         .from(insights)
-        .where(
-          and(
-            eq(insights.organisationId, organisationId),
-            eq(insights.category, input.category),
-            eq(insights.status, "ready"),
-            gte(insights.createdAt, startOfUtcDay())
-          )
-        )
-        .limit(1);
-
+        .where(eq(insights.organisationId, organisationId));
+      const duplicate = blockingInsight(again, input.category, monthKey);
       if (!duplicate) {
         throw error;
       }
 
-      return { insight: duplicate, alreadyRecorded: true };
+      return { insight: duplicate, alreadyRecorded: true, appended: false };
     }
   });
+}
+
+function statedTips(history: Insight[]): string[] {
+  return history
+    .filter(row => row.status === "ready" && !isDismissedInsight(row))
+    .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+    .flatMap(row => row.tips);
+}
+
+function blockingInsight(
+  history: Insight[],
+  category: InsightCategory,
+  monthKey: string
+): Insight | undefined {
+  const monthRows = history
+    .filter(
+      row => row.category === category && insightMonthKey(row.createdAt) === monthKey
+    )
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  return (
+    monthRows.find(
+      row =>
+        row.status === "analysing" ||
+        (row.status === "ready" && !isDismissedInsight(row))
+    ) ?? monthRows.find(row => isDismissedInsight(row))
+  );
 }
 
 export async function startDailyInsightRuns(): Promise<{
@@ -301,7 +408,7 @@ export async function startDailyInsightRuns(): Promise<{
       await runWorkflowAsync(DAILY_INSIGHT_WORKFLOW_CODE, {
         entityId: org.brainEntityId,
         inputMessage:
-          "Create today's personal-finance insight cards from the organisation's transactions.",
+          "Review this month's transactions and update the insight cards. Do not restate a finding already recorded.",
       });
       started += 1;
     } catch (error) {
@@ -332,12 +439,47 @@ export async function completeInsight(
   }
 
   return withOrgContext(organisationId, async tx => {
+    const [existing] = await tx
+      .select()
+      .from(insights)
+      .where(
+        and(eq(insights.id, insightId), eq(insights.organisationId, organisationId))
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new Error("Insight not found.");
+    }
+    if (isDismissedInsight(existing)) {
+      return existing;
+    }
+
+    const history = await tx
+      .select()
+      .from(insights)
+      .where(eq(insights.organisationId, organisationId));
+    const monthKey = insightMonthKey(existing.createdAt);
+    const priorTips = history
+      .filter(
+        row =>
+          row.id !== existing.id &&
+          row.status === "ready" &&
+          !isDismissedInsight(row) &&
+          !(
+            row.category === existing.category &&
+            insightMonthKey(row.createdAt) === monthKey
+          )
+      )
+      .flatMap(row => row.tips);
+    const freshTips = tipsNotAlreadyStated(tips, priorTips);
+    const savedTips = freshTips.length > 0 ? freshTips : [NOTHING_NEW_TIP];
+
     const [updated] = await tx
       .update(insights)
       .set({
         status: "ready",
         title,
-        tips,
+        tips: savedTips,
         updatedAt: new Date(),
       })
       .where(
@@ -358,13 +500,45 @@ export async function dismissInsight(
   insightId: string
 ): Promise<boolean> {
   return withOrgContext(organisationId, async tx => {
-    const deleted = await tx
-      .delete(insights)
+    const [target] = await tx
+      .select()
+      .from(insights)
       .where(
         and(eq(insights.id, insightId), eq(insights.organisationId, organisationId))
       )
-      .returning({ id: insights.id });
+      .limit(1);
 
-    return deleted.length > 0;
+    if (!target) return false;
+    if (isDismissedInsight(target)) return true;
+
+    const monthKey = insightMonthKey(target.createdAt);
+    const history = await tx
+      .select()
+      .from(insights)
+      .where(eq(insights.organisationId, organisationId));
+    const ids = history
+      .filter(
+        row =>
+          row.category === target.category &&
+          insightMonthKey(row.createdAt) === monthKey &&
+          !isDismissedInsight(row)
+      )
+      .map(row => row.id);
+
+    if (ids.length === 0) return true;
+
+    await tx
+      .update(insights)
+      .set({
+        status: "ready",
+        title: DISMISSED_INSIGHT_TITLE,
+        tips: [],
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(insights.organisationId, organisationId), inArray(insights.id, ids))
+      );
+
+    return true;
   });
 }

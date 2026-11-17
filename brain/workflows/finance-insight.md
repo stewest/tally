@@ -2,8 +2,10 @@
 name: Finance Insight
 code: WF-FINANCE-INSIGHT
 type: RUNNABLE
-version: 3
+version: 4
 description: Produces one short, actionable personal-finance insight card for a requested category from the organisation's transactions, then writes it back to the app.
+# This list is the whole run. A brain default does not override it (BRA210).
+# Delete this model line to follow Settings / DEFAULT_LLM_MODEL / compose llm-model.
 model: anthropic/claude-sonnet-4-6
 system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
@@ -65,6 +67,7 @@ Category codes and their meaning:
 ## Rules
 
 - Never invent transaction amounts, merchants, or dates.
+- Do not repeat a tip already stated on another insight for this month.
 - Prefer British English spelling.
 - Do not expose API keys, credentials, or bank account numbers. Use account
   nicknames only (skill `BUS404`).

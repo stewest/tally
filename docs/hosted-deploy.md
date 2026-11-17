@@ -15,7 +15,7 @@ Accounts and keys you will need:
 - [Clerk](https://dashboard.clerk.com) (required on Vercel / production)
 - [Supabase](https://supabase.com/dashboard) (hosted project, not local `supabase start`)
 - [Vercel](https://vercel.com)
-- Anthropic API key (workflows pin Anthropic). Voyage is optional at deploy (`voyage-3-lite`; embeddings skipped if unset). Optional: OpenRouter (`openrouter/auto`), Azure OpenAI, OpenAI / xAI keys, `DEFAULT_LLM_MODEL`, or compose `llm-model: telosbrain/xai/grok-4.6` on Telos Hosted (2× xAI list on brain credit; TALLY does not enable this by default) (BRA210 / BRA301)
+- Anthropic API key (workflows pin Anthropic, and that pin is the whole run until you delete it). Voyage is optional at deploy (`voyage-3-lite`; embeddings skipped if unset). Optional keys for a model you name yourself: OpenRouter (`openrouter/auto`), Azure OpenAI, OpenAI / xAI, `DEFAULT_LLM_MODEL`, or compose `llm-model: telosbrain/xai/grok-4.6` on Telos Hosted (2× xAI list on brain credit; TALLY leaves this commented) (BRA210 / BRA212)
 
 A random shared tool secret (`TOOL_API_KEY` / `MY_APP_API_KEY`) — generate a new one for hosted; do not reuse a value you are not sure about.
 
@@ -214,11 +214,11 @@ Minimum for a first Brain-enabled deploy:
 |---|---|
 | `TELOS_BRAIN_ORG_API_KEY` | Org key from step 2 (`tbk_…`). CLI only; never uploaded to the brain. |
 | `BRAIN_URL` | Optional if you added the [Telos Brain integration](https://vercel.com/integrations/telos-brain) (`TELOS_BRAIN_API_URL`). Otherwise `https://go.telosbrain.com` |
-| `ANTHROPIC_API_KEY` | Required for the workflow `model:` pins unless a reachable brain default is set |
-| `VOYAGE_API_KEY` | Optional at deploy (`voyage-3-lite`; embeddings skipped if unset) |
+| `ANTHROPIC_API_KEY` | Required. Workflows pin `anthropic/…`, and that pin is the whole run |
+| `VOYAGE_API_KEY` | Optional at deploy (default `voyage-3-lite`; embeddings skipped if unset). Or set `embedding-model` to `local_1/<model>` and `LOCAL_LLM_1_BASE_URL` |
 | `OPENROUTER_API_KEY` / `OPENAI_API_KEY` / `XAI_API_KEY` | Optional. For `openrouter/…`, `openrouter/auto`, `openai/…`, or `xai/…` |
 | `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` | Optional. For `azure/<deployment>` (optional `AZURE_OPENAI_API_VERSION`) |
-| `DEFAULT_LLM_MODEL` | Optional. Overrides workflow pins when the matching key exists (BRA210) |
+| `DEFAULT_LLM_MODEL` | Optional. Brain default for workflows that omit `model:`. Does not override a workflow pin (BRA210) |
 | `TOOL_API_KEY` | Shared tool handshake; deploy copies it to `MY_APP_API_KEY` |
 | `POSTGRES_URL` | Hosted Postgres |
 | Clerk + Supabase vars | From steps 3–4 |

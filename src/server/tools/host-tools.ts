@@ -403,20 +403,37 @@ export async function createInsight(
   }
 
   const tips = parseTipList(parameters.tips);
-  const { insight, alreadyRecorded } = await createReadyInsight(
+  const { insight, alreadyRecorded, appended } = await createReadyInsight(
     context.organisationId,
     { category, title, tips }
   );
 
-  const label = `${insight.title} (${insight.status})`;
+  if (appended && insight) {
+    return {
+      category: insight.category,
+      status: insight.status,
+      title: insight.title,
+      alreadyRecorded: true,
+      message: "Insight already recorded for this month. Added new findings.",
+    };
+  }
+
+  if (!insight || alreadyRecorded) {
+    return {
+      category,
+      status: "ready",
+      title,
+      alreadyRecorded: true,
+      message: "Insight already recorded for this month. Not restated.",
+    };
+  }
+
   return {
     category: insight.category,
     status: insight.status,
     title: insight.title,
-    alreadyRecorded,
-    message: alreadyRecorded
-      ? `Insight already recorded today: ${label}.`
-      : `Insight created: ${label}.`,
+    alreadyRecorded: false,
+    message: `Insight created: ${insight.title} (${insight.status}).`,
   };
 }
 
