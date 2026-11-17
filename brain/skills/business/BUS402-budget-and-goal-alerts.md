@@ -2,7 +2,9 @@
 name: Budget and Goal Alerts
 code: BUS402
 version: 1
-description: Flag budget pacing, rolling income versus expense, and savings rate from host-app budgets and transactions.
+description: >-
+  Flag budget pacing, rolling income versus expense, and savings rate from
+  host-app budgets and transactions.
 tools:
   - list_budgets
   - get_spend_summary

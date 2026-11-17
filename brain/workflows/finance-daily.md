@@ -9,6 +9,7 @@ system-prompt-code: WF-SYSTEM-PROMPT
 output-tokens: "4096,8192"
 max-turns: 30
 thinking: adaptive
+frequency: daily
 tools:
   - create_insight
   - find_available_skills

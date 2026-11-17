@@ -2,7 +2,9 @@
 name: Anomalies and Optimisation
 code: BUS403
 version: 1
-description: Spot price hikes, duplicate or unusual charges, and merchant concentration in recent transactions.
+description: >-
+  Spot price hikes, duplicate or unusual charges, and merchant concentration
+  in recent transactions.
 tools:
   - list_transactions
   - get_spend_summary
