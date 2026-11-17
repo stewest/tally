@@ -1,4 +1,4 @@
-name: Starter Brain
+name: local-brain
 description: A clean starter brain schema with the Telos Brain skillbook, execution tools (skills, memory, Q&A, inbox, organisation, unit of work, brain schema) and management tools (schema list/read/edit).
 embedding-model: voyage-3-lite
 learning-mode: low

@@ -1,7 +1,7 @@
 ---
 name: Category Taxonomy
 category: Categories
-version: 2
+version: 1
 ---
 
 # Category Taxonomy
@@ -16,8 +16,7 @@ specific match. Ask before inventing a new category.
 | Transport | Fuel, public transit, parking, rideshare |
 | Utilities | Power, water, internet, mobile |
 | Entertainment | Streaming, hobbies, events |
-| Dining | Cafes, restaurants, takeaways. Use Dining, not Dining & Drinks |
-| Giving | Tithe, church, charity, regular giving. Use Giving, not Donations or Giving & Donations |
+| Dining | Cafes, restaurants, takeaways |
 | Health | Pharmacy, GP, dentist, gym |
 | Insurance | House, contents, car, health, life |
 | Savings | Transfers to savings or investments |

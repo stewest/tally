@@ -1,22 +1,12 @@
 ---
 name: Spending & Transaction Category Taxonomy
 category: Finance
-version: 3
+version: 2
 ---
 
 ## Spending & Transaction Category Taxonomy
 
-Used in the **Spend by category** dashboard. The Transactions category dropdown is the app's own category list. It includes Giving and Dining and does not offer retired duplicate names.
-
-### Retired names
-
-These labels are the same category. Store and total them under the name on the right.
-
-| Retired label | Use |
-|---|---|
-| Giving & Donations | Giving |
-| Donations | Giving |
-| Dining & Drinks | Dining |
+Used in the **Spend by category** dashboard and the **Transactions** filter. The two surfaces may not share an identical set — the Transactions filter appears to use a more limited default set, and it is unclear whether custom categories can be added to it.
 
 ### Full category list (Spend by category dashboard)
 
@@ -25,6 +15,8 @@ These labels are the same category. Store and total them under the name on the r
 - Cash
 - Clothing
 - Dining
+- Dining & Drinks
+- Donations
 - Education
 - Entertainment
 - Family
@@ -62,4 +54,4 @@ These labels are the same category. Store and total them under the name on the r
 
 ### Open question
 
-The Transactions dropdown is the app category list, not this observed dashboard list. Giving is on that list. Donations, Giving & Donations, and Dining & Drinks are not — those payments total under Giving or Dining.
+Can categories be added to the Transactions filter to match the full taxonomy above? Not yet confirmed.
